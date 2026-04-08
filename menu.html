@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - UniDiPay Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Copy sidebar from dashboard.html -->
+           <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item ">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                <a href="faq.html" class="nav-item active">
+                    💬FAQ
+                </a>
+                <a href="nfc.html" class="nav-item">
+                    💳 NFC Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+
+        </aside>
+        
+        <main class="main-content">
+            <!-- Copy header from dashboard.html -->
+            <header class="header">
+                <div class="header-title">
+                    <h1>UniDiPay Admin System</h1>
+         
+                </div>
+                <div class="header-actions">
+                    <span id="adminName"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>         
+            </header>
+              <div class="content">
+                <div class="page-intro">
+                    <div>
+                        <h2>Menu Management</h2>
+                        <p class="page-subtitle">Curate items, pricing, and availability in one place.</p>
+                    </div>
+                    <div class="intro-actions">
+                        <button class="btn btn-primary" id="addMenuItemBtn">
+                            <span class="icon-wrapper" aria-hidden="true">➕</span>
+                            Add menu item
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Search + Category Filters -->
+                <div class="search-toolbar">
+                    <div class="search-container">
+                        <input type="text" id="searchInput" class="search-input" placeholder="🔍 Search menu items...">
+                    </div>
+
+                    <div class="pill-group" id="categoryPills">
+                        <button class="filter-btn pill-filter active" data-category="all">All</button>
+                        <button class="filter-btn pill-filter" data-category="meals">Meals</button>
+                        <button class="filter-btn pill-filter" data-category="drinks">Drinks</button>
+                        <button class="filter-btn pill-filter" data-category="snacks">Snacks</button>
+                        <button class="filter-btn pill-filter" data-category="desserts">Desserts</button>
+                    </div>
+                </div>
+
+                <!-- Menu Grid -->
+                <div id="menuGrid" class="menu-grid"></div>
+
+                <!-- Add/Edit Modal -->
+                    <div id="menuModal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h3 id="modalTitle">Add Menu Item</h3>
+                                <button class="close-btn" id="closeModalBtn">✖</button>
+                            </div>
+
+                            <div class="modal-body">
+                                <form id="menuForm">
+                                    <input type="hidden" id="menuId">
+
+                                    <label>Name</label>
+                                    <input type="text" id="menuName" required>
+
+                                    <label>Category</label>
+                                    <select id="menuCategory" required>
+                                        <option value="meals">Meals</option>
+                                        <option value="drinks">Drinks</option>
+                                        <option value="snacks">Snacks</option>
+                                        <option value="desserts">Desserts</option>
+                                    </select>
+
+                                    <label>Price</label>
+                                    <input type="number" id="menuPrice" required>
+
+                                    <label>Description</label>
+                                    <textarea id="menuDescription" required></textarea>
+
+                                    <label>Image URL</label>
+                                    <input type="text" id="menuImage">
+
+                                    <button type="submit" class="btn btn-primary mt-4">Save Item</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+            </div>    
+        </main>
+                
+        <script src="js/main.js"></script>
+                           
+         <script>
+            // Init Dashboard
+            document.addEventListener("DOMContentLoaded", () => {
+                UniDiPay.protectPage();
+                UniDiPay.initDashboard();
+                Menu.loadMenuItems("all");
+
+                // Search
+                document.getElementById("searchInput").addEventListener("input", UniDiPay.debounce(e => {
+                    const q = e.target.value.toLowerCase();
+                    const cards = document.querySelectorAll(".menu-card");
+
+                    cards.forEach(c => {
+                        c.style.display = c.textContent.toLowerCase().includes(q) ? "" : "none";
+                    });
+                }, 300));
+
+                // Filters
+                document.querySelectorAll(".filter-btn").forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        document.querySelector(".filter-btn.active").classList.remove("active");
+                        btn.classList.add("active");
+                        Menu.loadMenuItems(btn.dataset.category);
+                    });
+                });
+
+                // Open modal
+                document.getElementById("addMenuItemBtn").onclick = Menu.openAddModal;
+                // Handle Add/Edit Menu Form submission
+document.getElementById("menuForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const menuId = document.getElementById("menuId").value;
+    const payload = {
+        name: document.getElementById("menuName").value,
+        category: document.getElementById("menuCategory").value,
+        price: parseFloat(document.getElementById("menuPrice").value),
+        description: document.getElementById("menuDescription").value,
+        image_url: document.getElementById("menuImage").value
+    };
+
+    try {
+        let url = 'menu.php';
+        let options = {
+            method: menuId ? "PUT" : "POST",
+            body: JSON.stringify(menuId ? { id: menuId, ...payload } : payload)
+        };
+
+        const res = await UniDiPay.apiRequest(url, options);
+        UniDiPay.showSuccess(menuId ? "Menu item updated" : "Menu item added");
+        document.getElementById("menuModal").classList.remove("show");
+        Menu.loadMenuItems(document.querySelector(".filter-btn.active").dataset.category);
+    } catch (error) {
+        UniDiPay.showError("Failed to save menu item");
+        console.error(error);
+    }
+});
+
+                // Close modal
+                document.getElementById("closeModalBtn").onclick = () =>
+                    document.getElementById("menuModal").classList.remove("show");
+            });
+            </script>
+    </body>
+</html>

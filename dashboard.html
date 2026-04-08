@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - UniDiPay Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                 <a href="faq.html" class="nav-item ">
+                    💬FAQ
+                </a>
+                <a href="nfc.html" class="nav-item">
+                    💳 NFC Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>UniDiPay Admin System</h1>
+         
+                </div>
+                <div class="header-actions">
+                    <span id="adminName"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2>Dashboard Overview</h2>
+                        <p style="color: var(--gray-600); margin-top: 4px;">Welcome to UniDiPay Admin System</p>
+                    </div>
+                    <!-- <button class="btn btn-primary" id="loadDemoBtn">
+                        Load Demo Data
+                    </button> -->
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Total Users</div>
+                            <div class="stat-value" id="totalUsers">0</div>
+                        </div>
+                        <div class="stat-icon blue">👥</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Menu Items</div>
+                            <div class="stat-value" id="totalMenuItems">0</div>
+                        </div>
+                        <div class="stat-icon green">🍽️</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">NFC Cards</div>
+                            <div class="stat-value" id="totalNfcCards">0</div>
+                        </div>
+                        <div class="stat-icon purple">💳</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Pending Orders</div>
+                            <div class="stat-value" id="pendingOrders">0</div>
+                        </div>
+                        <div class="stat-icon yellow">⏳</div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <div class="stat-label">Completed Orders</div>
+                            <div class="stat-value" id="completedOrders">0</div>
+                        </div>
+                        <div class="stat-icon emerald">✅</div>
+                    </div>
+                </div>
+
+                <!-- Recent Transactions & Low Balance -->
+                <div class="grid grid-cols-2" style="margin-top: 24px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Transactions</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="recentTransactions"></div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Low Balance Cards</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="lowBalanceCards"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        const UniDiPay = window.UniDiPay;
+
+        // Protect page
+        protectPage();
+
+        // Initialize
+        initDashboard();
+        loadDashboardStats();
+
+        // Load demo data button
+        document.getElementById('loadDemoBtn').addEventListener('click', loadDemoData);
+
+        /**
+         * Load dashboard statistics
+         */
+        async function loadDashboardStats() {
+            try {
+                console.log('Loading dashboard stats...');
+                const data = await apiRequest('reports.php?action=dashboard_stats');
+                console.log('Dashboard stats received:', data);
+
+                // Update stats
+                document.getElementById('totalUsers').textContent = data.total_users || 0;
+                document.getElementById('totalMenuItems').textContent = data.total_menu_items || 0;
+                document.getElementById('totalNfcCards').textContent = data.total_nfc_cards || 0;
+                document.getElementById('pendingOrders').textContent = data.pending_orders || 0;
+                document.getElementById('completedOrders').textContent = data.completed_orders || 0;
+
+                // Display recent transactions
+                displayRecentTransactions(data.recent_transactions || []);
+
+                // Display low balance cards
+                displayLowBalanceCards(data.low_balance_cards || []);
+
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+                showError('Failed to load dashboard statistics');
+            }
+        }
+
+        /**
+         * Display recent transactions
+         */
+        function displayRecentTransactions(transactions) {
+            const container = document.getElementById('recentTransactions');
+
+            if (transactions.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No recent transactions</p></div>';
+                return;
+            }
+
+            container.innerHTML = transactions.slice(0, 5).map(t => `
+                <div style="padding: 12px; background: var(--gray-50); border-radius: 8px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 500;">${t.card_id}</div>
+                            <div style="font-size: 12px; color: var(--gray-600);">${t.reason || 'Transaction'}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 500; color: ${t.type === 'debit' ? 'var(--danger)' : 'var(--success)'};">
+                                ${t.type === 'debit' ? '-' : '+'}${formatCurrency(t.amount)}
+                            </div>
+                            <div style="font-size: 12px; color: var(--gray-600);">
+                                ${new Date(t.created_at).toLocaleDateString()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Display low balance cards
+         */
+        function displayLowBalanceCards(cards) {
+            const container = document.getElementById('lowBalanceCards');
+
+            if (cards.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>All cards have sufficient balance</p></div>';
+                return;
+            }
+
+            container.innerHTML = cards.slice(0, 5).map(card => `
+                <div style="padding: 12px; background: #FEE2E2; border: 1px solid #FCA5A5; border-radius: 8px; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div style="font-weight: 500;">${card.card_id}</div>
+                            <div style="font-size: 12px; color: var(--gray-600);">Student ID: ${card.student_id}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 500; color: var(--danger);">
+                                ${formatCurrency(card.balance)}
+                            </div>
+                            <span class="badge badge-danger">Low</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Load demo data (for initial setup)
+         */
+        async function loadDemoData() {
+            if (!confirm('This will initialize the database with demo data. Continue?')) {
+                return;
+            }
+
+            try {
+                showSuccess('Demo data loaded successfully! Please refresh the page.');
+                alert('To load demo data, import the sample_data.sql file from phpMyAdmin');
+                location.reload();
+            } catch (error) {
+                showError('Failed to load demo data');
+                console.error(error);
+            }
+        }
+
+        // Auto refresh every 30 seconds
+        setInterval(loadDashboardStats, 30000);
+    </script>
+</body>
+</html>

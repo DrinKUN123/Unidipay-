@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - UniDiPay Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Copy sidebar from dashboard.html -->
+           <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                <a href="faq.html" class="nav-item active">
+                    💬FAQ
+                <a href="nfc.html" class="nav-item">
+                    💳 NFC Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+                <a href="audit_logs.html" class="nav-item">
+                    🛡️ Audit Logs
+                </a>
+                <a href="activity_logs.html" class="nav-item">
+                    📜 Activity Logs
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <!-- Copy header from dashboard.html -->
+            <header class="header">
+                <div class="header-title">
+                    <h1>UniDiPay Admin System</h1>
+         
+                </div>
+                <div class="header-actions">
+                    <span id="adminName"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            
+            <div class="content">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2>User Management</h2>
+                        <p>Manage student accounts and NFC cards</p>
+                    </div>
+                    <button class="btn btn-primary" id="addUserBtn">
+                        ➕ Add User
+                    </button>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="search-bar">
+                            
+                            <input type="text" id="searchInput" placeholder="🔍 Search by name, student ID, or NFC card...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Students Table -->
+                <div class="card">
+                    <div class="table-container">
+                        <table id="studentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Student ID</th>
+                                    <th>Program</th>
+                                    <th>Year Level</th>
+                                    <th>NFC Card ID</th>
+                                    <th>Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="studentsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal" id="userModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">Add New User</h3>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="userForm">
+                    <input type="hidden" id="userId">
+                    
+                    <div class="form-group">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="student_id">Student ID</label>
+                        <input type="text" id="student_id" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="program">Program</label>
+                        <select id="program" required>
+                            <option value="">Select Program</option>
+                            <option value="BSCS">BSCS - Computer Science</option>
+                            <option value="BSIT">BSIT - Information Technology</option>
+                            <option value="BSIS">BSIS - Information Systems</option>
+                            <option value="BSCpE">BSCpE - Computer Engineering</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="year_level">Year Level</label>
+                        <select id="year_level" required>
+                            <option value="">Select Year Level</option>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                            <option value="4th Year">4th Year</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nfc_card_id">NFC Card ID</label>
+                        <input type="text" id="nfc_card_id" required placeholder="e.g., NFC001">
+                    </div>
+
+                    <div class="form-group" id="balanceGroup">
+                        <label for="nfc_balance">Initial Balance (₱)</label>
+                        <input type="number" id="nfc_balance" step="0.01" min="0" value="0">
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button type="button" class="btn btn-secondary" style="flex:1" onclick="closeModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" style="flex:1">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+       const UniDiPay = window.UniDiPay;
+
+        protectPage();
+        initDashboard();
+        loadStudents();
+
+        let students = [];
+        let editingId = null;
+
+        // Load all students
+        async function loadStudents() {
+            try {
+                const data = await apiRequest('students.php?action=all');
+                students = data.students || [];
+                displayStudents(students);
+            } catch (error) {
+                showError('Failed to load students');
+            }
+        }
+
+        // Display students in table
+        function displayStudents(data) {
+            const tbody = document.getElementById('studentsBody');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No students found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(s => `
+                <tr>
+                    <td>${s.name}</td>
+                    <td>${s.student_id}</td>
+                    <td>${s.program}</td>
+                    <td>${s.year_level}</td>
+                    <td><span class="badge badge-purple">${s.nfc_card_id}</span></td>
+                    <td>${formatCurrency(s.nfc_balance || 0)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-icon btn-edit" onclick="editStudent(${s.id})">✏️</button>
+                            <button class="btn-icon btn-delete" onclick="deleteStudent(${s.id})">🗑️</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Search students
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = students.filter(s => 
+                s.name.toLowerCase().includes(term) ||
+                s.student_id.toLowerCase().includes(term) ||
+                s.nfc_card_id.toLowerCase().includes(term)
+            );
+            displayStudents(filtered);
+        });
+
+        // Add user button
+        document.getElementById('addUserBtn').addEventListener('click', () => {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = 'Add New User';
+            document.getElementById('balanceGroup').style.display = 'block';
+            document.getElementById('userForm').reset();
+            document.getElementById('userModal').classList.add('show');
+        });
+
+        // Edit student
+        window.editStudent = (id) => {
+            editingId = id;
+            const student = students.find(s => s.id == id);
+            
+            document.getElementById('modalTitle').textContent = 'Edit User';
+            document.getElementById('balanceGroup').style.display = 'none';
+            document.getElementById('userId').value = student.id;
+            document.getElementById('name').value = student.name;
+            document.getElementById('student_id').value = student.student_id;
+            document.getElementById('program').value = student.program;
+            document.getElementById('year_level').value = student.year_level;
+            document.getElementById('nfc_card_id').value = student.nfc_card_id;
+            
+            document.getElementById('userModal').classList.add('show');
+        };
+
+        // Delete student
+        window.deleteStudent = async (id) => {
+            if (!confirm('Are you sure you want to delete this user?')) return;
+            
+            try {
+                await apiRequest(`students.php?action=delete&id=${id}`, { method: 'DELETE' });
+                showSuccess('Student deleted successfully');
+                loadStudents();
+            } catch (error) {
+                showError(error.message);
+            }
+        };
+
+        // Close modal
+        window.closeModal = () => {
+            document.getElementById('userModal').classList.remove('show');
+        };
+
+        // Form submission
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                student_id: document.getElementById('student_id').value,
+                program: document.getElementById('program').value,
+                year_level: document.getElementById('year_level').value,
+                nfc_card_id: document.getElementById('nfc_card_id').value
+            };
+
+            if (editingId) {
+                formData.id = editingId;
+                try {
+                    await apiRequest('students.php', {
+                        method: 'PUT',
+                        body: JSON.stringify(formData)
+                    });
+                    showSuccess('Student updated successfully');
+                } catch (error) {
+                    showError(error.message);
+                    return;
+                }
+            } else {
+                formData.nfc_balance = parseFloat(document.getElementById('nfc_balance').value);
+                try {
+                    await apiRequest('students.php', {
+                        method: 'POST',
+                        body: JSON.stringify(formData)
+                    });
+                    showSuccess('Student created successfully');
+                } catch (error) {
+                    showError(error.message);
+                    return;
+                }
+            }
+
+            closeModal();
+            loadStudents();
+        });
+    </script>
+</body>
+</html>

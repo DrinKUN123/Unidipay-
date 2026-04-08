@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Monitoring - UniDiPay Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                <a href="faq.html" class="nav-item ">
+                    💬FAQ
+                </a>
+                <a href="nfc.html" class="nav-item">
+                    💳 NFC Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>UniDiPay Admin System</h1>
+                </div>
+                <div class="header-actions">
+                    <span id="adminName"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-intro">
+                    <div>
+                        <h2>Order Monitoring</h2>
+                        <p class="page-subtitle">Real-time tracking with faster triage</p>
+                    </div>
+                    <div class="intro-actions">
+                        <span class="live-chip"><span class="pulse-dot"></span>Live updates on</span>
+                        <button class="ghost-btn" onclick="loadOrderStats(); loadOrders();">↻ Refresh now</button>
+                    </div>
+                </div>
+
+                <!-- Search Bar + Filters -->
+                <div class="search-toolbar">
+                    <div class="search-container">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            class="search-input" 
+                            placeholder="🔍 Search by Order ID, Student Name, or Student ID..."
+                        >
+                    </div>
+                    <div class="pill-group" id="statusPills">
+                        <button class="pill-filter active" data-sort="all">All</button>
+                        <button class="pill-filter" data-sort="pending">Pending</button>
+                        <button class="pill-filter" data-sort="processing">Processing</button>
+                        <button class="pill-filter" data-sort="ready">Ready</button>
+                        <button class="pill-filter" data-sort="completed">Completed</button>
+                    </div>
+                </div>
+
+                <!-- Order Stats Grid -->
+                <div class="stats-grid" id="orderStatsGrid">
+                    <div class="stat-card stat-card-clickable" data-sort="all" title="Click to sort by All Orders">
+                        <div class="stat-info">
+                            <div class="stat-label">All Orders</div>
+                            <div class="stat-value" id="totalOrders">0</div>
+                        </div>
+                        <div class="stat-icon blue" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <rect x="4" y="5" width="16" height="14" rx="2" ry="2" />
+                                <path d="M9 3h6M9 3v2m6-2v2" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-sort="pending" title="Click to sort by Pending">
+                        <div class="stat-info">
+                            <div class="stat-label">Pending</div>
+                            <div class="stat-value" id="pendingCount">0</div>
+                        </div>
+                        <div class="stat-icon yellow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <circle cx="12" cy="12" r="8" />
+                                <path d="M12 8v4l3 2" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-sort="processing" title="Click to sort by Processing">
+                        <div class="stat-info">
+                            <div class="stat-label">Processing</div>
+                            <div class="stat-value" id="processingCount">0</div>
+                        </div>
+                        <div class="stat-icon purple" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M4 9a8 8 0 0 1 13.3-4.4M20 15a8 8 0 0 1-13.3 4.4" />
+                                <path d="M4 9V4m0 5h5M20 15v5m0-5h-5" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-sort="ready" title="Click to sort by Ready">
+                        <div class="stat-info">
+                            <div class="stat-label">Ready</div>
+                            <div class="stat-value" id="readyCount">0</div>
+                        </div>
+                        <div class="stat-icon purple" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <circle cx="12" cy="12" r="8" />
+                                <path d="m9 12 2 2 4-4" />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-sort="completed" title="Click to sort by Completed">
+                        <div class="stat-info">
+                            <div class="stat-label">Completed</div>
+                            <div class="stat-value" id="completedCount">0</div>
+                        </div>
+                        <div class="stat-icon emerald" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path d="M8 3h8l1 4H7l1-4Z" />
+                                <path d="M7 7h10v8a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V7Z" />
+                                <path d="m9.5 13 1.5 1.5 3-3" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orders List -->
+                <div class="card">
+                    <div class="card-body">
+                        <div id="ordersList"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Order Modal -->
+    <div id="editOrderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Order <span id="editOrderId"></span></h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editOrderForm">
+                    <div class="form-group">
+                        <label>Student Name</label>
+                        <input type="text" id="editStudentName" readonly style="background: var(--gray-100);">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Student ID</label>
+                        <input type="text" id="editStudentId" readonly style="background: var(--gray-100);">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="editPaymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="nfc">NFC Card</option>
+                            <!-- <option value="cash">Cash Payment</option> -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Order Status</label>
+                        <select id="editOrderStatus" required>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="ready">Ready</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Total Amount</label>
+                        <input type="number" id="editOrderTotal" step="0.01" readonly style="background: var(--gray-100);">
+                    </div>
+
+                    <div id="cashPaymentSection" style="display: none;">
+                        <div class="form-group">
+                            <label>Cash Received</label>
+                            <input type="number" id="cashReceived" step="0.01" placeholder="Enter amount received" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Change</label>
+                            <input type="number" id="changeAmount" readonly style="background: var(--gray-100);">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <h4>Order Items:</h4>
+                        <div id="editOrderItems" style="background: var(--gray-50); padding: 12px; border-radius: 6px; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveOrderChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Item Modal -->
+    <div id="addItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Item to Order <span id="addItemOrderId"></span></h3>
+                <button class="modal-close" onclick="closeAddItemModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addItemForm">
+                    <div class="form-group">
+                        <label>Menu Item</label>
+                        <select id="menuItemSelect" required>
+                            <option value="">Select a menu item</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Price</label>
+                        <input type="number" id="itemPrice" step="0.01" readonly style="background: var(--gray-100);">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="itemQuantity" min="1" value="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Subtotal</label>
+                        <input type="number" id="itemSubtotal" step="0.01" readonly style="background: var(--gray-100);">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddItemModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="addItemToOrder()">Add Item</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>Confirm Delete</h3>
+                <button class="modal-close" onclick="closeDeleteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteConfirmMessage" style="font-size: 14px; color: var(--gray-700); margin: 0;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="confirmDelete()" style="background: var(--danger); color: white;">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Order Modal -->
+    <!-- <div id="createOrderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create New Order</h3>
+                <button class="modal-close" onclick="closeCreateOrderModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createOrderForm">
+                    <div class="form-group">
+                        <label>Student</label>
+                        <select id="createStudentSelect" required>
+                            <option value="">Select a student</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="createPaymentMethod" required>
+                            <option value="">Select Payment Method</option>
+                            <option value="nfc">NFC Card</option>
+                            <option value="cash">Cash Payment</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Order Status</label>
+                        <select id="createOrderStatus" required value="pending">
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="ready">Ready</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Total Amount</label>
+                        <input type="number" id="createOrderTotal" step="0.01" value="0.00" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCreateOrderModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="createNewOrder()">Create Order</button>
+            </div>
+        </div>
+    </div> -->
+
+    <script src="js/main.js"></script>
+    <script>
+        const UniDiPay = window.UniDiPay;
+        
+        // Global state
+        let currentSortFilter = 'all';
+        let allOrders = [];
+
+        // Protect page
+        protectPage();
+
+        // Initialize
+        initDashboard();
+        loadOrderStats();
+        loadOrders();
+        setupStatCardListeners();
+        setupSearchFunctionality();
+
+        // Setup stat card click listeners for sorting
+        function setupStatCardListeners() {
+            const statCards = document.querySelectorAll('.stat-card-clickable');
+            statCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const sortType = this.getAttribute('data-sort');
+                    filterOrdersByStatus(sortType);
+                });
+            });
+
+            const pillFilters = document.querySelectorAll('.pill-filter');
+            pillFilters.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    filterOrdersByStatus(pill.dataset.sort);
+                });
+            });
+        }
+
+        /**
+         * Load order statistics
+         */
+        async function loadOrderStats() {
+            try {
+                const data = await apiRequest('orders.php?action=stats');
+                const stats = data.stats;
+
+                document.getElementById('totalOrders').textContent = stats.total_orders || 0;
+                document.getElementById('pendingCount').textContent = stats.pending || 0;
+                document.getElementById('processingCount').textContent = stats.processing || 0;
+                document.getElementById('readyCount').textContent = stats.ready || 0;
+                document.getElementById('completedCount').textContent = stats.completed || 0;
+
+            } catch (error) {
+                console.error('Failed to load order statistics:', error);
+            }
+        }
+
+        /**
+         * Load all orders
+         */
+        async function loadOrders() {
+            try {
+                const data = await apiRequest('orders.php?action=all');
+                allOrders = data.orders || [];
+                displayOrders(allOrders);
+
+            } catch (error) {
+                showError('Failed to load orders');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Filter orders by status
+         */
+        function filterOrdersByStatus(status) {
+            currentSortFilter = status;
+            
+            if (status === 'all') {
+                displayOrders(allOrders);
+            } else {
+                const filtered = allOrders.filter(order => order.status === status);
+                displayOrders(filtered);
+            }
+
+            // Highlight active stat card
+            updateStatCardHighlight(status);
+        }
+
+        /**
+         * Display orders
+         */
+        function displayOrders(orders) {
+            const container = document.getElementById('ordersList');
+
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><p>No orders found</p></div>';
+                return;
+            }
+
+            container.innerHTML = orders.map(order => `
+                <div class="order-item">
+                    <div class="order-header">
+                        <div class="order-info">
+                            <h4>Order #${order.id}</h4>
+                            <p class="order-student">Student: ${order.student_name} (${order.student_id})</p>
+                            <p class="order-payment">Payment: <span class="payment-badge payment-${order.payment_method || 'nfc'}">${(order.payment_method || 'nfc').toUpperCase()}</span></p>
+                        </div>
+                        <div class="order-meta">
+                            <span class="order-total">${formatCurrency(order.total)}</span>
+                            <span class="badge badge-${getStatusClass(order.status)}">${order.status.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    <div class="order-items">
+                        ${order.items.map(item => `
+                            <div class="order-item-row">
+                                <span>${item.name} × ${item.quantity}</span>
+                                <span>${formatCurrency(item.subtotal)}</span>
+                                <button class="btn-item-delete" onclick="openDeleteItemModal(${order.id}, ${item.id}, '${item.name}')" aria-label="Delete item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" />
+                                        <path d="M10 11v6M14 11v6" />
+                                        <path d="M4 7h16" />
+                                        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="order-actions">
+                        <select class="order-status-select" onchange="updateOrderStatus(${order.id}, this.value)">
+                            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="processing" ${order.status === 'processing' ? 'selected' : ''}>Processing</option>
+                            <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Ready</option>
+                            <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                        <div class="order-buttons">
+                            <button class="btn-order-add" onclick="openAddItemModal(${order.id})">
+                                <span class="icon-wrapper" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
+                                </span>
+                                Add item
+                            </button>
+                            <button class="btn-order-delete" onclick="openDeleteOrderModal(${order.id})">
+                                <span class="icon-wrapper" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M19 7 18 19a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 7" />
+                                        <path d="M10 11v6M14 11v6" />
+                                        <path d="M4 7h16" />
+                                        <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </span>
+                                Delete order
+                            </button>
+                        </div>
+                        <span class="order-time">${formatDateTime(order.created_at)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Update stat card highlight
+         */
+        function updateStatCardHighlight(activeStatus) {
+            const statCards = document.querySelectorAll('.stat-card-clickable');
+            statCards.forEach(card => {
+                card.classList.remove('active-filter');
+                if (card.getAttribute('data-sort') === activeStatus) {
+                    card.classList.add('active-filter');
+                }
+            });
+
+            const pillFilters = document.querySelectorAll('.pill-filter');
+            pillFilters.forEach(pill => {
+                pill.classList.toggle('active', pill.dataset.sort === activeStatus);
+            });
+        }
+
+        /**
+         * Get badge class for status
+         */
+        function getStatusClass(status) {
+            switch(status) {
+                case 'pending': return 'warning';
+                case 'processing': return 'info';
+                case 'ready': return 'success';
+                case 'completed': return 'success';
+                default: return 'secondary';
+            }
+        }
+
+        /**
+         * Update order status
+         */
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                await apiRequest(`orders.php?action=status&id=${orderId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                showSuccess(`Order status updated to ${newStatus}`);
+                
+                // Live update - refresh immediately
+                loadOrderStats();
+                loadOrders();
+
+            } catch (error) {
+                showError('Failed to update order status');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Open edit order modal
+         */
+        function openEditModal(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (!order) {
+                showError('Order not found');
+                return;
+            }
+
+            // Populate modal
+            document.getElementById('editOrderId').textContent = '#' + order.id;
+            document.getElementById('editStudentName').value = order.student_name;
+            document.getElementById('editStudentId').value = order.student_id;
+            document.getElementById('editPaymentMethod').value = order.payment_method || 'nfc';
+            document.getElementById('editOrderStatus').value = order.status;
+            document.getElementById('editOrderTotal').value = order.total;
+
+            // Display items
+            const itemsHtml = order.items.map(item => `
+                <div style="padding: 8px; border-bottom: 1px solid var(--gray-200);">
+                    <span>${item.name}</span> × <span>${item.quantity}</span>
+                    <br><small style="color: var(--gray-600);">${formatCurrency(item.subtotal)}</small>
+                </div>
+            `).join('');
+            document.getElementById('editOrderItems').innerHTML = itemsHtml || '<p>No items</p>';
+
+            // Setup payment method change listener
+            setupCashPaymentToggle(order);
+
+            // Store current order ID
+            window.currentEditOrderId = orderId;
+
+            // Show modal
+            document.getElementById('editOrderModal').classList.add('show');
+        }
+
+        /**
+         * Close edit modal
+         */
+        function closeEditModal() {
+            document.getElementById('editOrderModal').classList.remove('show');
+            document.getElementById('editOrderForm').reset();
+        }
+
+        /**
+         * Setup cash payment toggle
+         */
+        function setupCashPaymentToggle(order) {
+            const paymentMethod = document.getElementById('editPaymentMethod');
+            const cashSection = document.getElementById('cashPaymentSection');
+            const cashReceived = document.getElementById('cashReceived');
+
+            const toggleCashSection = () => {
+                if (paymentMethod.value === 'cash') {
+                    cashSection.style.display = 'block';
+                    cashReceived.required = true;
+                } else {
+                    cashSection.style.display = 'none';
+                    cashReceived.required = false;
+                }
+            };
+
+            paymentMethod.removeEventListener('change', toggleCashSection);
+            paymentMethod.addEventListener('change', toggleCashSection);
+
+            // Calculate change
+            cashReceived.addEventListener('input', function() {
+                const total = parseFloat(document.getElementById('editOrderTotal').value) || 0;
+                const received = parseFloat(this.value) || 0;
+                const change = received - total;
+                document.getElementById('changeAmount').value = change >= 0 ? change.toFixed(2) : '0.00';
+            });
+
+            // Initial toggle
+            toggleCashSection();
+        }
+
+        /**
+         * Save order changes
+         */
+        async function saveOrderChanges() {
+            const orderId = window.currentEditOrderId;
+            const paymentMethod = document.getElementById('editPaymentMethod').value;
+            const status = document.getElementById('editOrderStatus').value;
+
+            if (!paymentMethod) {
+                showError('Please select payment method');
+                return;
+            }
+
+            try {
+                await apiRequest(`orders.php?action=edit&id=${orderId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        payment_method: paymentMethod,
+                        status: status
+                    })
+                });
+
+                showSuccess('Order updated successfully');
+                closeEditModal();
+                loadOrderStats();
+                loadOrders();
+
+            } catch (error) {
+                showError(error.message || 'Failed to save order changes');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Mark order as cash payment
+         */
+        async function markCashPayment(orderId) {
+            try {
+                await apiRequest(`orders.php?action=edit&id=${orderId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        payment_method: 'cash',
+                        status: 'pending'
+                    })
+                });
+
+                showSuccess('Order marked as Cash Payment');
+                loadOrderStats();
+                loadOrders();
+
+            } catch (error) {
+                showError('Failed to mark as cash payment');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Setup search functionality
+         */
+        function setupSearchFunctionality() {
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', debounceSearch);
+        }
+
+        /**
+         * Debounce search to avoid excessive filtering
+         */
+        function debounceSearch() {
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(performSearch, 300);
+        }
+
+        /**
+         * Perform search/filter
+         */
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            if (!searchTerm) {
+                // If search is empty, show current filter
+                if (currentSortFilter === 'all') {
+                    displayOrders(allOrders);
+                } else {
+                    const filtered = allOrders.filter(order => order.status === currentSortFilter);
+                    displayOrders(filtered);
+                }
+                return;
+            }
+
+            // Search across order ID, student name, and student ID
+            const searchResults = allOrders.filter(order => {
+                const orderId = order.id.toString();
+                const studentName = order.student_name.toLowerCase();
+                const studentId = order.student_id.toString();
+
+                return (
+                    orderId.includes(searchTerm) ||
+                    studentName.includes(searchTerm) ||
+                    studentId.includes(searchTerm)
+                );
+            });
+
+            displayOrders(searchResults);
+        }
+
+        /**
+         * Open Add Item Modal
+         */
+        function openAddItemModal(orderId) {
+            window.currentOrderForItem = orderId;
+            loadMenuItems();
+            document.getElementById('addItemOrderId').textContent = '#' + orderId;
+            document.getElementById('addItemModal').classList.add('show');
+        }
+
+        /**
+         * Close Add Item Modal
+         */
+        function closeAddItemModal() {
+            document.getElementById('addItemModal').classList.remove('show');
+            document.getElementById('addItemForm').reset();
+        }
+
+        /**
+         * Load menu items into dropdown
+         */
+        async function loadMenuItems() {
+            try {
+                const data = await apiRequest('menu.php?action=all');
+                const items = data.menu_items || [];
+
+                const select = document.getElementById('menuItemSelect');
+                select.innerHTML = '<option value="">Select a menu item</option>';
+                
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.name} - ₱${item.price}`;
+                    option.dataset.price = item.price;
+                    select.appendChild(option);
+                });
+
+                // Update price when item selected
+                select.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const price = parseFloat(selectedOption.dataset.price) || 0;
+                    document.getElementById('itemPrice').value = price.toFixed(2);
+                    updateItemSubtotal();
+                });
+
+                // Update subtotal on quantity change
+                document.getElementById('itemQuantity').addEventListener('input', updateItemSubtotal);
+
+            } catch (error) {
+                showError('Failed to load menu items');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Update item subtotal
+         */
+        function updateItemSubtotal() {
+            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+            const quantity = parseInt(document.getElementById('itemQuantity').value) || 1;
+            const subtotal = price * quantity;
+            document.getElementById('itemSubtotal').value = subtotal.toFixed(2);
+        }
+
+        /**
+         * Add item to order
+         */
+        async function addItemToOrder() {
+            const orderId = window.currentOrderForItem;
+            const itemId = document.getElementById('menuItemSelect').value;
+            const itemName = document.getElementById('menuItemSelect').options[document.getElementById('menuItemSelect').selectedIndex].text;
+            const price = parseFloat(document.getElementById('itemPrice').value);
+            const quantity = parseInt(document.getElementById('itemQuantity').value);
+            const subtotal = parseFloat(document.getElementById('itemSubtotal').value);
+
+            if (!itemId) {
+                showError('Please select a menu item');
+                return;
+            }
+
+            try {
+                await apiRequest(`orders.php?action=additem&id=${orderId}`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        menu_item_id: itemId,
+                        name: itemName,
+                        price: price,
+                        quantity: quantity,
+                        subtotal: subtotal
+                    })
+                });
+
+                showSuccess('Item added to order');
+                closeAddItemModal();
+                loadOrders();
+                loadOrderStats();
+
+            } catch (error) {
+                showError('Failed to add item');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Open Delete Item Modal
+         */
+        function openDeleteItemModal(orderId, itemId, itemName) {
+            window.deleteItemData = { orderId, itemId };
+            document.getElementById('deleteConfirmMessage').textContent = `Are you sure you want to delete "${itemName}" from this order?`;
+            document.getElementById('deleteConfirmModal').classList.add('show');
+        }
+
+        /**
+         * Open Delete Order Modal
+         */
+        function openDeleteOrderModal(orderId) {
+            window.deleteItemData = { orderId };
+            document.getElementById('deleteConfirmMessage').textContent = 'Are you sure you want to delete this entire order? This action cannot be undone.';
+            document.getElementById('deleteConfirmModal').classList.add('show');
+        }
+
+        /**
+         * Close Delete Modal
+         */
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').classList.remove('show');
+        }
+
+        /**
+         * Confirm Delete
+         */
+        async function confirmDelete() {
+            const { orderId, itemId } = window.deleteItemData;
+
+            try {
+                if (itemId) {
+                    // Delete item
+                    await apiRequest(`orders.php?action=deleteitem&id=${orderId}&item_id=${itemId}`, {
+                        method: 'DELETE'
+                    });
+                    showSuccess('Item deleted from order');
+                } else {
+                    // Delete order
+                    await apiRequest(`orders.php?action=delete&id=${orderId}`, {
+                        method: 'DELETE'
+                    });
+                    showSuccess('Order deleted successfully');
+                }
+
+                closeDeleteModal();
+                loadOrders();
+                loadOrderStats();
+
+            } catch (error) {
+                showError('Failed to delete');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Open Create Order Modal
+         */
+        async function openCreateOrderModal() {
+            await loadStudents();
+            document.getElementById('createOrderModal').classList.add('show');
+        }
+
+        /**
+         * Close Create Order Modal
+         */
+        function closeCreateOrderModal() {
+            document.getElementById('createOrderModal').classList.remove('show');
+            document.getElementById('createOrderForm').reset();
+        }
+
+        /**
+         * Load students into dropdown
+         */
+        async function loadStudents() {
+            try {
+                const data = await apiRequest('students.php?action=all');
+                const students = data.students || [];
+
+                const select = document.getElementById('createStudentSelect');
+                select.innerHTML = '<option value="">Select a student</option>';
+                
+                students.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.id;
+                    option.textContent = `${student.name} (${student.student_id})`;
+                    select.appendChild(option);
+                });
+
+            } catch (error) {
+                showError('Failed to load students');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Create new order
+         */
+        async function createNewOrder() {
+            const studentId = document.getElementById('createStudentSelect').value;
+            const paymentMethod = document.getElementById('createPaymentMethod').value;
+            const status = document.getElementById('createOrderStatus').value;
+            const total = parseFloat(document.getElementById('createOrderTotal').value);
+
+            if (!studentId || !paymentMethod || !status) {
+                showError('Please fill in all required fields');
+                return;
+            }
+
+            try {
+                await apiRequest('orders.php?action=create', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        student_id: studentId,
+                        payment_method: paymentMethod,
+                        status: status,
+                        total: total,
+                        nfc_card_id: 'manual'
+                    })
+                });
+
+                showSuccess('Order created successfully');
+                closeCreateOrderModal();
+                loadOrders();
+                loadOrderStats();
+
+            } catch (error) {
+                showError('Failed to create order');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Live updates - poll every 2 seconds
+         */
+        function startLiveUpdates() {
+            setInterval(() => {
+                loadOrderStats();
+                loadOrders();
+            }, 2000); // Check for updates every 2 seconds
+        }
+
+        // Start live updates on load
+        startLiveUpdates();
+    </script>
+</body>
+</html>

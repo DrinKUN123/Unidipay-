@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFC Management - UniDiPay Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item ">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                <a href="faq.html" class="nav-item">
+                    💬FAQ
+                </a>
+                <a href="nfc.html" class="nav-item">
+                    💳 NFC Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+        </aside>
+        
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <div class="header-title">
+                    <h1>UniDiPay Admin System</h1>
+                </div>
+                <div class="header-actions">
+                    <span id="adminName"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <div class="content">
+                <!-- Page Title -->
+                <div class="page-header">
+                    <div>
+                        <h2>NFC Management</h2>
+                        <p>Search cards, load balance, and view transaction history</p>
+                    </div>
+                </div>
+
+                <!-- Search Card Section -->
+                <div class="card nfc-search-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Search NFC Card</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="search-form">
+                            <input type="text" id="cardIdInput" class="search-input" placeholder="🔍 Enter NFC Card ID (e.g., NFC001)">
+                            <button id="searchBtn" class="btn btn-primary">
+                                Search
+                            </button>   
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Details Section -->
+                <div id="cardDetailsContainer" class="card nfc-details-card" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title">Card Information</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-details-grid">
+                            <div class="detail-item">
+                                <label>Card ID</label>
+                                <span id="detailCardId">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Student Name</label>
+                                <span id="detailStudentName">-</span>
+                            </div>
+                            <div class="detail-item">
+                                <label>Student ID</label>
+                                <span id="detailStudentId">-</span>
+                            </div>
+                            <div class="detail-item balance-item">
+                                <label>Current Balance</label>
+                                <span id="detailBalance" class="balance-value">₱0.00</span>
+                            </div>
+                        </div>
+
+                        <div class="card-actions">
+                            <button id="loadBalanceBtn" class="btn btn-primary">Load Balance</button>
+                            <button id="deductBalanceBtn" class="btn btn-warning">Deduct Balance</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transaction History Section -->
+                <div id="historyContainer" class="card nfc-history-card" style="display: none;">
+                    <div class="card-header">
+                        <h3 class="card-title">Transaction History</h3>
+                    </div>
+                    <div class="card-body">
+                        <div id="historyList" class="history-list">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="card empty-state-card">
+                    <div class="empty-icon">💳</div>
+                    <p>Search for an NFC card to view details and manage balance</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Load Balance Modal -->
+    <div id="loadBalanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Load Balance</h3>
+                <button class="modal-close" onclick="closeLoadModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="loadForm" onsubmit="handleLoadBalance(event)">
+                    <div class="form-group">
+                        <label>Card ID</label>
+                        <input type="text" id="loadCardId" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₱)</label>
+                        <input type="number" id="loadAmount" placeholder="Enter amount" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Load Balance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deduct Balance Modal -->
+    <div id="deductBalanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Deduct Balance</h3>
+                <button class="modal-close" onclick="closeDeductModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="deductForm" onsubmit="handleDeductBalance(event)">
+                    <div class="form-group">
+                        <label>Card ID</label>
+                        <input type="text" id="deductCardId" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Amount (₱)</label>
+                        <input type="number" id="deductAmount" placeholder="Enter amount" min="0.01" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Reason</label>
+                        <input type="text" id="deductReason" placeholder="Enter reason for deduction">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Deduct Balance</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/nfc.js"></script>
+</body>
+</html>
