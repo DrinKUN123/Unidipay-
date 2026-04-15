@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Records & Reports - UniDiPay Admin</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+               <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item ">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                <a href="nfc.html" class="nav-item">
+                    💳 RFID Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+                <a href="Uniform.html" class="nav-item">
+                    👔 Uniforms
+                </a>
+                <a href="shifts.html" class="nav-item">
+                    🕒 Shifts
+                </a>
+            </nav>
+
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1>UniDiPay Admin System</h1>
+                </div>
+                <div class="header-actions">
+                    <span id="adminName"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2>Records & Reports</h2>
+                        <p style="color: var(--gray-600); margin-top: 4px;">Sales analytics and transaction tracking</p>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="font-size: 12px; color: var(--success); font-weight: 600;">
+                            <i class="fa-solid fa-circle" aria-hidden="true"></i> Live Updates Active
+                        </div>
+                        <!-- <button class="btn btn-primary" onclick="exportReportsCSV()" style="padding: 8px 16px; font-size: 14px;">
+                            📥 Export CSV
+                        </button> -->
+                    </div>
+                </div>
+
+                <!-- Report Stats Grid -->
+                <div class="stats-grid" id="reportStatsGrid">
+                    <div class="stat-card stat-card-clickable" data-report="daily" title="Click to view Daily Sales">
+                        <div class="stat-info">
+                            <div class="stat-label">Daily Sales</div>
+                            <div class="stat-value" id="dailySales">₱0.00</div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i></div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-report="completed" title="Click to view Completed Orders">
+                        <div class="stat-info">
+                            <div class="stat-label">Completed Orders</div>
+                            <div class="stat-value" id="completedOrders">0</div>
+                        </div>
+                        <div class="stat-icon green"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-report="user_logs" title="Click to view User Management Logs">
+                        <div class="stat-info">
+                            <div class="stat-label">User Management Logs</div>
+                            <div class="stat-value" id="userManagementLogsCount">0</div>
+                        </div>
+                        <div class="stat-icon blue"><i class="fa-solid fa-scroll" aria-hidden="true"></i></div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-report="employee_logs" title="Click to view Employee Roles Logs">
+                        <div class="stat-info">
+                            <div class="stat-label">Employee Roles Logs</div>
+                            <div class="stat-value" id="employeeRolesLogsCount">0</div>
+                        </div>
+                        <div class="stat-icon emerald"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-report="transactions" title="Click to view Transactions">
+                        <div class="stat-info">
+                            <div class="stat-label">Total Transactions</div>
+                            <div class="stat-value" id="totalTransactions">0</div>
+                        </div>
+                        <div class="stat-icon purple"><i class="fa-solid fa-chart-column" aria-hidden="true"></i></div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-report="reloads" title="Click to view Card Reloads">
+                        <div class="stat-info">
+                            <div class="stat-label">Card Reloads</div>
+                            <div class="stat-value" id="cardReloads">0</div>
+                        </div>
+                        <div class="stat-icon yellow"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i></div>
+                    </div>
+
+                    <div class="stat-card stat-card-clickable" data-report="avg" title="Click to view Average Order Value">
+                        <div class="stat-info">
+                            <div class="stat-label">Avg Order Value</div>
+                            <div class="stat-value" id="avgOrderValue">₱0.00</div>
+                        </div>
+                        <div class="stat-icon emerald"><i class="fa-solid fa-gem" aria-hidden="true"></i></div>
+                    </div>
+                </div>
+
+                <!-- Reports Container -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Report Data</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Filter Section -->
+                        <div id="filterSection" style="display: none; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <!-- Daily Sales Filters -->
+                            <div id="dailySalesFilters" class="filter-group" style="display: none;">
+                                <label style="display: block; margin-bottom: 10px; font-weight: 600;"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Select Date for Daily Sales</label>
+                                <input type="date" id="dailySalesDate" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                            </div>
+
+                            <!-- Completed Orders Filters -->
+                            <div id="completedOrdersFilters" class="filter-group" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">From Date</label>
+                                        <input type="date" id="ordersDateFrom" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">To Date</label>
+                                        <input type="date" id="ordersDateTo" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">Search Student</label>
+                                        <input type="text" id="ordersSearch" class="search-input" placeholder="Name or ID..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- User Management Logs Filters -->
+                            <div id="userLogsFilters" class="filter-group" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">Search Logs</label>
+                                        <input type="text" id="userLogsSearch" class="search-input" placeholder="Admin, action, or details..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">From Date & Time</label>
+                                        <input type="datetime-local" id="userLogsFrom" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">To Date & Time</label>
+                                        <input type="datetime-local" id="userLogsTo" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Employee Roles Logs Filters -->
+                            <div id="employeeLogsFilters" class="filter-group" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">Search Logs</label>
+                                        <input type="text" id="employeeLogsSearch" class="search-input" placeholder="Admin, action, or details..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">From Date & Time</label>
+                                        <input type="datetime-local" id="employeeLogsFrom" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">To Date & Time</label>
+                                        <input type="datetime-local" id="employeeLogsTo" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transactions Filters -->
+                            <div id="transactionsFilters" class="filter-group" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">From Date</label>
+                                        <input type="date" id="transactionsDateFrom" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">To Date</label>
+                                        <input type="date" id="transactionsDateTo" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">Search Card ID</label>
+                                        <input type="text" id="transactionsCardSearch" class="search-input" placeholder="Card ID..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card Reloads Filters -->
+                            <div id="reloadsFilters" class="filter-group" style="display: none;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: end;">
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">From Date</label>
+                                        <input type="date" id="reloadsDateFrom" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">To Date</label>
+                                        <input type="date" id="reloadsDateTo" class="date-input" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                    <div>
+                                        <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 12px;">Search Card ID</label>
+                                        <input type="text" id="reloadsCardSearch" class="search-input" placeholder="Card ID..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box;">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; margin-bottom: 15px;">
+                            <select id="reportTypeSelect" class="report-select" style="padding: 8px 12px; border: 1px solid #ddd;">
+                                <option value="">-- Select Report Type --</option>
+                                <option value="daily">Daily Sales</option>
+                                <option value="completed">Completed Orders</option>
+                                <option value="user_logs">User Management Logs</option>
+                                <option value="employee_logs">Employee Roles Logs</option>
+                                <option value="transactions">Total Transactions</option>
+                                <option value="reloads">Card Reloads</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;">
+                            <button class="btn btn-secondary" onclick="exportReportExcel('daily')">📥 Export Daily Sales (Excel)</button>
+                            <button class="btn btn-secondary" onclick="exportReportExcel('completed')">📥 Export Completed Orders (Excel)</button>
+                            <button class="btn btn-secondary" onclick="exportReportExcel('transactions')">📥 Export Transactions (Excel)</button>
+                            <button class="btn btn-secondary" onclick="exportReportExcel('reloads')">📥 Export Card Reloads (Excel)</button>
+                        </div>
+
+                        <div id="reportContent"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        const UniDiPay = window.UniDiPay;
+
+        // Protect page
+        protectPage();
+
+        // Initialize
+        initDashboard();
+        loadReportStats();
+        setupReportCardListeners();
+        setupReportTypeSelector();
+        setupReportFilters();
+
+        // Global state
+        let currentReportFilter = '';
+        let chartInstance = null;
+
+        function formatDateTimeInput(dateObj) {
+            const pad = (value) => String(value).padStart(2, '0');
+            return `${dateObj.getFullYear()}-${pad(dateObj.getMonth() + 1)}-${pad(dateObj.getDate())}T${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())}`;
+        }
+
+        /**
+         * Setup report card click listeners
+         */
+        function setupReportCardListeners() {
+            const statCards = document.querySelectorAll('.stat-card-clickable');
+            statCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const reportType = this.getAttribute('data-report');
+                    switchReportView(reportType);
+                });
+            });
+        }
+
+        /**
+         * Setup report type selector
+         */
+        function setupReportTypeSelector() {
+            const typeSelect = document.getElementById('reportTypeSelect');
+            typeSelect.addEventListener('change', function() {
+                const reportType = this.value;
+                if (reportType) {
+                    switchReportView(reportType);
+                }
+            });
+        }
+
+        /**
+         * Setup report filters
+         */
+        function setupReportFilters() {
+            // Daily Sales Filters
+            document.getElementById('dailySalesDate').valueAsDate = new Date();
+            document.getElementById('dailySalesDate').addEventListener('change', loadReports);
+
+            // Completed Orders Filters
+            document.getElementById('ordersDateFrom').valueAsDate = new Date(new Date().setDate(new Date().getDate() - 90));
+            document.getElementById('ordersDateTo').valueAsDate = new Date();
+            document.getElementById('ordersDateFrom').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('ordersDateTo').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('ordersSearch').addEventListener('input', debounceSearch(loadReports, 300));
+
+            // User Management Logs Filters
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+            document.getElementById('userLogsFrom').value = formatDateTimeInput(sevenDaysAgo);
+            document.getElementById('userLogsTo').value = formatDateTimeInput(now);
+            document.getElementById('userLogsFrom').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('userLogsTo').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('userLogsSearch').addEventListener('input', debounceSearch(loadReports, 300));
+
+            // Employee Roles Logs Filters
+            document.getElementById('employeeLogsFrom').value = formatDateTimeInput(sevenDaysAgo);
+            document.getElementById('employeeLogsTo').value = formatDateTimeInput(now);
+            document.getElementById('employeeLogsFrom').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('employeeLogsTo').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('employeeLogsSearch').addEventListener('input', debounceSearch(loadReports, 300));
+
+            // Transactions Filters
+            document.getElementById('transactionsDateFrom').valueAsDate = new Date(new Date().setDate(new Date().getDate() - 30));
+            document.getElementById('transactionsDateTo').valueAsDate = new Date();
+            document.getElementById('transactionsDateFrom').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('transactionsDateTo').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('transactionsCardSearch').addEventListener('input', debounceSearch(loadReports, 300));
+
+            // Card Reloads Filters
+            document.getElementById('reloadsDateFrom').valueAsDate = new Date(new Date().setDate(new Date().getDate() - 30));
+            document.getElementById('reloadsDateTo').valueAsDate = new Date();
+            document.getElementById('reloadsDateFrom').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('reloadsDateTo').addEventListener('change', debounceSearch(loadReports, 300));
+            document.getElementById('reloadsCardSearch').addEventListener('input', debounceSearch(loadReports, 300));
+        }
+
+        /**
+         * Debounce function for search inputs
+         */
+        function debounceSearch(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        /**
+         * Load report statistics
+         */
+        async function loadReportStats() {
+            try {
+                const data = await apiRequest('reports.php?action=dashboard_stats');
+                const stats = data.stats;
+
+                document.getElementById('dailySales').textContent = formatCurrency(stats.daily_sales || 0);
+                document.getElementById('completedOrders').textContent = stats.completed_orders || 0;
+                document.getElementById('userManagementLogsCount').textContent = stats.user_management_logs || 0;
+                document.getElementById('employeeRolesLogsCount').textContent = stats.employee_roles_logs || 0;
+                document.getElementById('totalTransactions').textContent = stats.total_transactions || 0;
+                document.getElementById('cardReloads').textContent = stats.card_reloads || 0;
+                document.getElementById('avgOrderValue').textContent = formatCurrency(stats.avg_order_value || 0);
+
+            } catch (error) {
+                console.error('Failed to load report statistics:', error);
+            }
+        }
+
+        /**
+         * Load reports based on selected type and filters
+         */
+        async function loadReports() {
+            try {
+                const reportType = document.getElementById('reportTypeSelect').value;
+                console.log('Loading report type:', reportType);
+                
+                if (!reportType) {
+                    document.getElementById('reportContent').innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Please select a report type to view data</p>';
+                    return;
+                }
+
+                let url = '';
+
+                switch(reportType) {
+                    case 'daily': {
+                        const date = document.getElementById('dailySalesDate').value;
+                        url = `reports.php?action=daily_sales&date=${date}`;
+                        break;
+                    }
+                    case 'completed': {
+                        const dateFrom = document.getElementById('ordersDateFrom').value;
+                        const dateTo = document.getElementById('ordersDateTo').value;
+                        const student = document.getElementById('ordersSearch').value;
+                        url = `reports.php?action=completed_orders&date_from=${dateFrom}&date_to=${dateTo}`;
+                        if (student) url += `&student=${encodeURIComponent(student)}`;
+                        break;
+                    }
+                    case 'user_logs': {
+                        const fromDateTime = document.getElementById('userLogsFrom').value;
+                        const toDateTime = document.getElementById('userLogsTo').value;
+                        const searchTerm = document.getElementById('userLogsSearch').value;
+                        url = 'reports.php?action=user_management_logs';
+                        if (fromDateTime) url += `&from_datetime=${encodeURIComponent(fromDateTime)}`;
+                        if (toDateTime) url += `&to_datetime=${encodeURIComponent(toDateTime)}`;
+                        if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+                        break;
+                    }
+                    case 'employee_logs': {
+                        const fromDateTime = document.getElementById('employeeLogsFrom').value;
+                        const toDateTime = document.getElementById('employeeLogsTo').value;
+                        const searchTerm = document.getElementById('employeeLogsSearch').value;
+                        url = 'reports.php?action=employee_roles_logs';
+                        if (fromDateTime) url += `&from_datetime=${encodeURIComponent(fromDateTime)}`;
+                        if (toDateTime) url += `&to_datetime=${encodeURIComponent(toDateTime)}`;
+                        if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+                        break;
+                    }
+                    case 'transactions': {
+                        const dateFrom = document.getElementById('transactionsDateFrom').value;
+                        const dateTo = document.getElementById('transactionsDateTo').value;
+                        const cardId = document.getElementById('transactionsCardSearch').value;
+                        url = `reports.php?action=transactions&date_from=${dateFrom}&date_to=${dateTo}`;
+                        if (cardId) url += `&card_id=${encodeURIComponent(cardId)}`;
+                        break;
+                    }
+                    case 'reloads': {
+                        const dateFrom = document.getElementById('reloadsDateFrom').value;
+                        const dateTo = document.getElementById('reloadsDateTo').value;
+                        const cardId = document.getElementById('reloadsCardSearch').value;
+                        url = `reports.php?action=reloads&date_from=${dateFrom}&date_to=${dateTo}`;
+                        if (cardId) url += `&card_id=${encodeURIComponent(cardId)}`;
+                        console.log('Card Reloads URL:', url);
+                        break;
+                    }
+                }
+
+                console.log('API Request URL:', url);
+                console.log('Making API request...');
+                
+                const response = await fetch(`php/api/${url}`);
+                console.log('Response status:', response.status, response.statusText);
+                
+                const data = await response.json();
+                console.log('Report data received:', data);
+                
+                if (!response.ok) {
+                    const errorMsg = data.error || `HTTP ${response.status}: ${response.statusText}`;
+                    console.error('API Error:', errorMsg);
+                    showError(errorMsg);
+                    document.getElementById('reportContent').innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + errorMsg + '</div>';
+                    return;
+                }
+                
+                displayReport(data, reportType);
+
+            } catch (error) {
+                console.error('loadReports error:', error);
+                const errorMsg = error.message || 'Failed to load reports';
+                showError(errorMsg);
+                document.getElementById('reportContent').innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + errorMsg + '</div>';
+            }
+        }
+
+        /**
+         * Display report based on type
+         */
+        function displayReport(data, reportType) {
+            const container = document.getElementById('reportContent');
+
+            switch(reportType) {
+                case 'daily':
+                    displayDailySalesReport(data, container);
+                    break;
+                case 'completed':
+                    displayCompletedOrdersReport(data, container);
+                    break;
+                case 'user_logs':
+                    displayActivityLogsReport(data, container, 'User Management Logs');
+                    break;
+                case 'employee_logs':
+                    displayActivityLogsReport(data, container, 'Employee Roles Logs');
+                    break;
+                case 'transactions':
+                    displayTransactionsReport(data, container);
+                    break;
+                case 'reloads':
+                    displayReloadsReport(data, container);
+                    break;
+            }
+        }
+
+        /**
+         * Display daily sales report with chart
+         */
+        function displayDailySalesReport(data, container) {
+            try {
+                // Validate data exists
+                if (!data) {
+                    console.error('displayDailySalesReport: No data received');
+                    container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: No data received from server</div>';
+                    return;
+                }
+
+                const total_orders = data.total_orders || 0;
+                const total_sales = data.total_sales || 0;
+                const items = data.items || [];
+                const hourly = data.hourly || [];
+                console.log('Daily Sales Data:', { total_orders, total_sales, items, hourly });
+
+                let html = `
+                    <div class="report-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Orders:</span>
+                            <span class="summary-value">${total_orders}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Sales:</span>
+                            <span class="summary-value">${formatCurrency(total_sales)}</span>
+                        </div>
+                    </div>
+
+                <div style="margin: 20px 0; padding: 20px; background: #fff; border-radius: 8px;">
+                    <h4 style="margin-bottom: 15px;">Hourly Sales Trend</h4>
+                    <canvas id="salesChart" style="max-height: 300px;"></canvas>
+                </div>
+
+                <h4 style="margin: 20px 0 15px 0;">Items Sold Breakdown</h4>
+                <table class="reports-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Quantity Sold</th>
+                            <th>Unit Price</th>
+                            <th>Total Sales</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+                if (!Array.isArray(items) || items.length === 0) {
+                    html += '<tr><td colspan="4" style="text-align: center; padding: 20px;"><i class="fa-solid fa-inbox" aria-hidden="true"></i> No items sold today</td></tr>';
+                } else {
+                    items.forEach(item => {
+                        if (!item) return;
+                        html += `
+                            <tr>
+                                <td>${item.name || '-'}</td>
+                                <td style="text-align: center;">${item.quantity_sold || 0}</td>
+                                <td>${formatCurrency(item.price || 0)}</td>
+                                <td><strong>${formatCurrency(item.total_sold || 0)}</strong></td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+
+                // Draw chart if hourly data exists and is array
+                if (Array.isArray(hourly) && hourly.length > 0) {
+                    setTimeout(() => {
+                        drawHourlySalesChart(hourly);
+                    }, 100);
+                } else if (hourly) {
+                    console.warn('Hourly data is not a valid array:', hourly);
+                }
+            } catch (error) {
+                console.error('Error displaying Daily Sales report:', error);
+                container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+
+        /**
+         * Draw hourly sales chart
+         */
+        function drawHourlySalesChart(hourlyData) {
+            const canvas = document.getElementById('salesChart');
+            if (!canvas) return;
+
+            // Destroy previous chart if it exists
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const hours = hourlyData.map(h => h.hour);
+            const sales = hourlyData.map(h => parseFloat(h.sales));
+
+            const ctx = canvas.getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'Sales (₱)',
+                        data: sales,
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#2563EB',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₱' + value.toFixed(2);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Display completed orders report
+         */
+        function displayCompletedOrdersReport(data, container) {
+            try {
+                // Validate data exists
+                if (!data) {
+                    console.error('displayCompletedOrdersReport: No data received');
+                    container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: No data received from server</div>';
+                    return;
+                }
+
+                const orders = data.orders || [];
+                const totalCount = data.total_count || 0;
+                console.log('Completed Orders Data:', orders, 'Total:', totalCount);
+
+                let html = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f3f4f6; border-radius: 4px;">
+                        <strong>Total Completed Orders: ${totalCount}</strong>
+                    </div>
+                    <table class="reports-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Student</th>
+                                <th>Items</th>
+                                <th>Amount</th>
+                                <th>Ordered Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                if (!Array.isArray(orders) || orders.length === 0) {
+                    html += '<tr><td colspan="6" style="text-align: center; padding: 20px;"><i class="fa-solid fa-inbox" aria-hidden="true"></i> No completed orders found</td></tr>';
+                } else {
+                    orders.forEach(order => {
+                        if (!order) return;
+                        const studentDisplay = (order.student_name || '') + (order.student_number ? ' (' + order.student_number + ')' : '');
+                        const items = order.items || 'N/A';
+                        const total = parseFloat(order.total || 0).toFixed(2);
+                        const createdAt = order.created_at ? formatDateTime(order.created_at) : '-';
+                        const status = (order.status || 'unknown').toUpperCase();
+                        
+                        html += `
+                            <tr>
+                                <td><strong>#${order.id}</strong></td>
+                                <td>${studentDisplay}</td>
+                                <td style="font-size: 12px;">${items}</td>
+                                <td><strong>₱${total}</strong></td>
+                                <td>${createdAt}</td>
+                                <td><span class="badge badge-success">${status}</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error displaying Completed Orders report:', error);
+                container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+
+        /**
+         * Display transactions report - Food order deductions only
+         */
+        function displayTransactionsReport(data, container) {
+            try {
+                // Validate data exists
+                if (!data) {
+                    console.error('displayTransactionsReport: No data received');
+                    container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: No data received from server</div>';
+                    return;
+                }
+
+                const transactions = data.transactions || [];
+                const totalCount = transactions.length || 0;
+                console.log('Transactions Data:', transactions, 'Total:', totalCount);
+
+                let html = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f3f4f6; border-radius: 4px;">
+                        <strong>Total Food Order Deductions: ${totalCount}</strong>
+                    </div>
+                    <table class="reports-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Card ID</th>
+                                <th>Student</th>
+                                <th>Deduction Amount</th>
+                                <th>Balance Before</th>
+                                <th>Balance After</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                if (!Array.isArray(transactions) || transactions.length === 0) {
+                    html += '<tr><td colspan="7" style="text-align: center; padding: 20px;"><i class="fa-solid fa-inbox" aria-hidden="true"></i> No food order transactions found</td></tr>';
+                } else {
+                    transactions.forEach(trans => {
+                        if (!trans) return;
+                        const createdAt = trans.created_at ? formatDateTime(trans.created_at) : '-';
+                        const cardId = trans.card_id || '-';
+                        const studentDisplay = trans.student_name ? 
+                            trans.student_name + (trans.student_id ? ' (' + trans.student_id + ')' : '') : 
+                            '-';
+                        const amount = parseFloat(trans.amount || 0).toFixed(2);
+                        const balanceBefore = parseFloat(trans.balance_before || 0).toFixed(2);
+                        const balanceAfter = parseFloat(trans.balance_after || 0).toFixed(2);
+                        const reason = trans.reason || 'Food Purchase';
+                        
+                        html += `
+                            <tr>
+                                <td>${createdAt}</td>
+                                <td><strong>${cardId}</strong></td>
+                                <td>${studentDisplay}</td>
+                                <td><span style="color: #EF4444; font-weight: 600;">₱${amount}</span></td>
+                                <td>₱${balanceBefore}</td>
+                                <td>₱${balanceAfter}</td>
+                                <td>${reason}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error displaying Transactions report:', error);
+                container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+
+        /**
+         * Display reloads report - Admin balance loads/deductions
+         */
+        function displayReloadsReport(data, container) {
+            try {
+                // Validate data exists
+                if (!data) {
+                    console.error('displayReloadsReport: No data received');
+                    container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: No data received from server</div>';
+                    return;
+                }
+
+                const reloads = data.reloads || [];
+                const totalCount = data.total_count || 0;
+                console.log('Displaying Card Reloads:', reloads, 'Total:', totalCount);
+
+                let html = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f3f4f6; border-radius: 4px;">
+                        <strong>Total Card Reloads: ${totalCount}</strong>
+                    </div>
+                    <table class="reports-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Card ID</th>
+                                <th>Student</th>
+                                <th>Reload Amount</th>
+                                <th>Balance Before</th>
+                                <th>Balance After</th>
+                                <th>Admin/Employee</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                // Check if we have valid array
+                if (!Array.isArray(reloads) || reloads.length === 0) {
+                    html += '<tr><td colspan="7" style="text-align: center; padding: 20px;"><i class="fa-solid fa-inbox" aria-hidden="true"></i> No card reload records found</td></tr>';
+                } else {
+                    reloads.forEach((reload, index) => {
+                        if (!reload) {
+                            console.warn('Invalid reload record at index', index);
+                            return;
+                        }
+                        
+                        const createdAt = reload.created_at ? formatDateTime(reload.created_at) : '-';
+                        const cardId = reload.card_id || '-';
+                        const studentDisplay = reload.student_name ? 
+                            reload.student_name + (reload.student_id ? ' (' + reload.student_id + ')' : '') : 
+                            '-';
+                        const amount = parseFloat(reload.amount || 0).toFixed(2);
+                        const balanceBefore = parseFloat(reload.balance_before || 0).toFixed(2);
+                        const balanceAfter = parseFloat(reload.balance_after || 0).toFixed(2);
+                        const adminName = reload.admin_name || 'Unknown';
+                        
+                        html += `
+                            <tr>
+                                <td>${createdAt}</td>
+                                <td><strong>${cardId}</strong></td>
+                                <td>${studentDisplay}</td>
+                                <td><span style="color: #10B981; font-weight: 600;">₱${amount}</span></td>
+                                <td>₱${balanceBefore}</td>
+                                <td>₱${balanceAfter}</td>
+                                <td>${adminName}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+                
+            } catch (error) {
+                console.error('Error displaying Card Reloads report:', error);
+                container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+
+        /**
+         * Display activity logs report
+         */
+        function displayActivityLogsReport(data, container, title) {
+            try {
+                if (!data) {
+                    container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: No data received from server</div>';
+                    return;
+                }
+
+                const logs = data.logs || [];
+                const totalCount = data.total_count || 0;
+
+                let html = `
+                    <div style="margin-bottom: 15px; padding: 10px; background: #f3f4f6; border-radius: 4px;">
+                        <strong>${title}: ${totalCount}</strong>
+                    </div>
+                    <table class="reports-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Action</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    html += '<tr><td colspan="5" style="text-align: center; padding: 20px;"><i class="fa-solid fa-inbox" aria-hidden="true"></i> No activity logs found</td></tr>';
+                } else {
+                    logs.forEach(log => {
+                        if (!log) return;
+                        const createdAt = log.created_at ? formatDateTime(log.created_at) : '-';
+                        const username = log.admin_username || '-';
+                        const action = log.action || '-';
+                        const details = log.details || '-';
+
+                        html += `
+                            <tr>
+                                <td>${username}</td>
+                                <td><strong>${action}</strong></td>
+                                <td>${createdAt}</td>
+                                <td><span class="badge badge-success">Logged</span></td>
+                                <td style="max-width: 420px; white-space: normal; word-break: break-word; font-size: 12px;">${details}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error displaying activity logs report:', error);
+                container.innerHTML = '<div style="color: #DC2626; padding: 20px; text-align: center;">❌ Error: ' + error.message + '</div>';
+            }
+        }
+
+        /**
+         * Switch report view and show appropriate filters
+         */
+        function switchReportView(reportType) {
+            currentReportFilter = reportType;
+            document.getElementById('reportTypeSelect').value = reportType;
+            
+            // Show filter section
+            const filterSection = document.getElementById('filterSection');
+            filterSection.style.display = 'block';
+
+            // Hide all filter groups
+            document.getElementById('dailySalesFilters').style.display = 'none';
+            document.getElementById('completedOrdersFilters').style.display = 'none';
+            document.getElementById('userLogsFilters').style.display = 'none';
+            document.getElementById('employeeLogsFilters').style.display = 'none';
+            document.getElementById('transactionsFilters').style.display = 'none';
+            document.getElementById('reloadsFilters').style.display = 'none';
+
+            // Show appropriate filter group
+            switch(reportType) {
+                case 'daily':
+                    document.getElementById('dailySalesFilters').style.display = 'block';
+                    break;
+                case 'completed':
+                    document.getElementById('completedOrdersFilters').style.display = 'block';
+                    break;
+                case 'user_logs':
+                    document.getElementById('userLogsFilters').style.display = 'block';
+                    break;
+                case 'employee_logs':
+                    document.getElementById('employeeLogsFilters').style.display = 'block';
+                    break;
+                case 'transactions':
+                    document.getElementById('transactionsFilters').style.display = 'block';
+                    break;
+                case 'reloads':
+                    document.getElementById('reloadsFilters').style.display = 'block';
+                    break;
+            }
+            
+            // Update highlight
+            updateReportCardHighlight(reportType);
+            loadReports();
+        }
+
+        /**
+         * Update report card highlight
+         */
+        function updateReportCardHighlight(activeReport) {
+            const reportCards = document.querySelectorAll('.stat-card-clickable');
+            reportCards.forEach(card => {
+                card.classList.remove('active-filter');
+                if (card.getAttribute('data-report') === activeReport) {
+                    card.classList.add('active-filter');
+                }
+            });
+        }
+
+        /**
+         * Export report data in Excel-compatible format
+         */
+        function exportReportExcel(type) {
+            try {
+                let url = `php/api/reports.php?action=export_excel&type=${encodeURIComponent(type)}`;
+
+                switch (type) {
+                    case 'daily': {
+                        const date = document.getElementById('dailySalesDate').value;
+                        if (date) {
+                            url += `&date=${encodeURIComponent(date)}`;
+                        }
+                        break;
+                    }
+                    case 'completed': {
+                        const dateFrom = document.getElementById('ordersDateFrom').value;
+                        const dateTo = document.getElementById('ordersDateTo').value;
+                        const student = document.getElementById('ordersSearch').value;
+                        if (dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+                        if (dateTo) url += `&date_to=${encodeURIComponent(dateTo)}`;
+                        if (student) url += `&student=${encodeURIComponent(student)}`;
+                        break;
+                    }
+                    case 'transactions': {
+                        const dateFrom = document.getElementById('transactionsDateFrom').value;
+                        const dateTo = document.getElementById('transactionsDateTo').value;
+                        const cardId = document.getElementById('transactionsCardSearch').value;
+                        if (dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+                        if (dateTo) url += `&date_to=${encodeURIComponent(dateTo)}`;
+                        if (cardId) url += `&card_id=${encodeURIComponent(cardId)}`;
+                        break;
+                    }
+                    case 'reloads': {
+                        const dateFrom = document.getElementById('reloadsDateFrom').value;
+                        const dateTo = document.getElementById('reloadsDateTo').value;
+                        const cardId = document.getElementById('reloadsCardSearch').value;
+                        if (dateFrom) url += `&date_from=${encodeURIComponent(dateFrom)}`;
+                        if (dateTo) url += `&date_to=${encodeURIComponent(dateTo)}`;
+                        if (cardId) url += `&card_id=${encodeURIComponent(cardId)}`;
+                        break;
+                    }
+                    default:
+                        showError('Unsupported export type');
+                        return;
+                }
+
+                window.location.href = url;
+            } catch (error) {
+                showError('Failed to export report');
+                console.error(error);
+            }
+        }
+
+        /**
+         * Live updates - poll every 3 seconds
+         */
+        function startLiveUpdates() {
+            setInterval(() => {
+                loadReportStats();
+                loadReports();
+            }, 3000); // Check for updates every 3 seconds
+        }
+
+        // Start live updates on load
+        startLiveUpdates();
+    </script>
+</body>
+</html>

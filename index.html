@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniDiPay - Admin Login</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">
+                    <img src="assets/UNIDIPAY%20LOGO.png" alt="UniDiPay Logo" class="logo-img" data-brand="true">
+                </div>
+                <h1>UniDiPay</h1>
+                <p>Admin Portal</p>
+            </div>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+
+            <form id="loginForm" class="login-form">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="Enter your full name">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="admin@unidipay.com">
+                </div>
+
+               <div class="form-group">
+    <label for="password">Password</label>
+
+    <div class="password-wrapper">
+        <input type="password" id="password" name="password" required placeholder="••••••••">
+        <span id="togglePassword" class="toggle-password">Show</span>
+    </div>
+</div>
+
+
+
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <span class="btn-text">Sign In</span>
+                    <span class="btn-loader" style="display: none;">
+                        <div class="spinner"></div> Signing In...
+                    </span>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <button id="toggleMode" class="link-button">
+                    <!-- Need an admin account? Sign Up -->
+                </button>
+            </div>
+
+            <div class="login-info">
+                <p>Canteen Ordering System with RFID-Based Payment</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        let isSignupMode = false;
+        const form = document.getElementById('loginForm');
+        const toggleBtn = document.getElementById('toggleMode');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = document.querySelector('.btn-text');
+        const btnLoader = document.querySelector('.btn-loader');
+        const errorDiv = document.getElementById('error-message');
+        const nameGroup = document.getElementById('nameGroup');
+        const nameInput = document.getElementById('name');
+
+        const togglePassword = document.getElementById('togglePassword');
+
+        togglePassword.addEventListener('click', () => {
+            if (password.type === 'password') {
+                password.type = 'text';
+                togglePassword.textContent = 'Hide';
+            } else {
+                password.type = 'password';
+                togglePassword.textContent = 'Show';
+            }
+        });
+
+        // Toggle between login and signup
+        toggleBtn.addEventListener('click', () => {
+            isSignupMode = !isSignupMode;
+            
+            if (isSignupMode) {
+                nameGroup.style.display = 'block';
+                nameInput.required = true;
+                btnText.textContent = 'Create Admin Account';
+                toggleBtn.textContent = 'Already have an account? Sign In';
+            } else {
+                nameGroup.style.display = 'none';
+                nameInput.required = false;
+                btnText.textContent = 'Sign In';
+                toggleBtn.textContent = 'Need an admin account? Sign Up';
+            }
+            
+            errorDiv.style.display = 'none';
+        });
+
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+            
+            // Show loader
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'flex';
+            submitBtn.disabled = true;
+            errorDiv.style.display = 'none';
+            
+            try {
+                const endpoint = isSignupMode 
+                    ? 'php/api/auth.php?action=register'
+                    : 'php/api/auth.php?action=login';
+                
+                const body = isSignupMode 
+                    ? JSON.stringify({ name, email, password })
+                    : JSON.stringify({ email, password });
+                
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body
+                });
+                
+                const data = await response.json();
+                
+                if (data.success || data.admin) {
+                    // Store admin info with role
+                    const admin = data.admin;
+                    localStorage.setItem('admin', JSON.stringify(admin));
+                    
+                    // Redirect based on role
+                    const redirectUrl = getRoleBasedRedirect(admin.role);
+                    window.location.href = redirectUrl;
+                } else {
+                    throw new Error(data.error || 'Authentication failed');
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            } finally {
+                btnText.style.display = 'inline';
+                btnLoader.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+
+        /**
+         * Get redirect URL based on user role
+         */
+        function getRoleBasedRedirect(role) {
+            const role_redirects = {
+                'manager': 'dashboard.html',
+                'staff': 'menu.html',
+                'cashier': 'orders.html'
+            };
+            return role_redirects[role] || 'dashboard.html';
+        }
+
+        // Check if already logged in
+        checkAuth().then(isAuthenticated => {
+            if (isAuthenticated) {
+                // Get user role from session via API
+                fetch('php/api/auth.php?action=check')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.loggedIn && data.admin) {
+                            const redirectUrl = getRoleBasedRedirect(data.admin.role);
+                            window.location.href = redirectUrl;
+                        }
+                    });
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - UniDiPay</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">UD</div>
+                <div class="sidebar-title">
+                    <h2>UniDiPay</h2>
+                    <p>Admin Portal</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item ">
+                    📊 Dashboard
+                </a>
+                <a href="users.html" class="nav-item">
+                    👥 User Management
+                </a>
+                <a href="EmloyeeRoles.html" class="nav-item">
+                    👥 Emloyee Roles
+                </a>
+                <a href="nfc.html" class="nav-item">
+                    💳 RFID Management
+                </a>
+                <a href="menu.html" class="nav-item">
+                    🍽️ Menu Management
+                </a>
+                <a href="orders.html" class="nav-item">
+                    📦 Order Monitoring
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+                <a href="reports.html" class="nav-item">
+                    📊 Records & Reports
+                </a>
+                <a href="Uniform.html" class="nav-item">
+                    📊 uniforms
+                </a>
+                <a href="shifts.html" class="nav-item">
+                    🕒 Shifts
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                © 2025 UniDiPay System<br>Version 1.0.0
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div class="header-title">
+                    <h1><i class="fa-solid fa-comments" aria-hidden="true"></i> Messages</h1>
+                    <p>Communicate with team members in real-time</p>
+                </div>
+                <div class="header-actions">
+                    <span id="adminName" class="user-badge"></span>
+                    <button class="btn btn-secondary" id="logoutBtn">
+                        🚪 Logout
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-section">
+                <div class="modern-messaging">
+                    <!-- Users/Conversations Panel -->
+                    <div class="conversations-panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-comments" aria-hidden="true"></i> Conversations</h3>
+                            <span class="users-badge" id="userCountBadge">0</span>
+                        </div>
+                        
+                        <div class="search-container">
+                            <input 
+                                type="text" 
+                                id="userSearch" 
+                                placeholder="Search conversations..."
+                                class="modern-search">
+                        </div>
+
+                        <div class="conversations-list" id="usersList">
+                            <div class="loading-state">
+                                <div class="spinner-mini"></div>
+                                <p>Loading conversations...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Panel -->
+                    <div class="chat-panel">
+                        <!-- Chat Header -->
+                        <div class="chat-header-modern" id="chatHeaderModern" style="display: none;">
+                            <div class="chat-user-info">
+                                <div class="user-avatar-large" id="chatUserAvatar">U</div>
+                                <div class="user-details">
+                                    <h3 id="selectedUserName">User Name</h3>
+                                    <span class="user-role-badge" id="selectedUserRole">role</span>
+                                    <small id="userStatus" class="user-status">offline</small>
+                                </div>
+                            </div>
+                            <div class="chat-actions">
+                                <button class="icon-btn" title="Info" aria-label="Conversation info"><i class="fa-solid fa-circle-info" aria-hidden="true"></i></button>
+                                <button class="icon-btn" title="Clear" onclick="clearMessages()" aria-label="Clear conversation"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div class="empty-state-modern" id="emptyState">
+                            <div class="empty-icon"><i class="fa-regular fa-comment-dots" aria-hidden="true"></i></div>
+                            <h4>No conversation selected</h4>
+                            <p>Choose a contact from the left to start chatting</p>
+                        </div>
+
+                        <!-- Messages Display -->
+                        <div class="messages-container" id="messagesContainer" style="display: none; flex: 1;">
+                            <div class="messages-area" id="messagesArea">
+                                <!-- Messages will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- Message Input -->
+                        <div class="message-input-modern" id="messageInputSection" style="display: none;">
+                            <div class="input-wrapper">
+                                <textarea 
+                                    id="messageInput" 
+                                    class="modern-textarea"
+                                    placeholder="Type your message... (Ctrl+Enter to send)"
+                                    rows="1"></textarea>
+                                <button class="btn-send-modern" id="sendBtn" title="Send message (Ctrl+Enter)">
+                                    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                            <small class="input-hint">Press Ctrl+Enter or click <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> to send</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script>
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await protectPage();
+            initDashboard();
+            initModernMessaging();
+        });
+
+        let selectedUserId = null;
+        let selectedUserName = null;
+        let selectedUserRole = null;
+        let messageRefreshInterval = null;
+
+        /**
+         * Initialize modern messaging system
+         */
+        function initModernMessaging() {
+            const sendBtn = document.getElementById('sendBtn');
+            const messageInput = document.getElementById('messageInput');
+            const userSearch = document.getElementById('userSearch');
+
+            // Auto-expand textarea
+            messageInput.addEventListener('input', () => {
+                messageInput.style.height = 'auto';
+                messageInput.style.height = Math.min(messageInput.scrollHeight, 100) + 'px';
+            });
+
+            // Send on Ctrl+Enter
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                }
+            });
+
+            // Send button
+            sendBtn.addEventListener('click', handleSendMessage);
+
+            // Search
+            userSearch.addEventListener('input', handleUserSearch);
+
+            // Load users
+            loadUsersList();
+
+            // Auto-refresh every 2 seconds
+            messageRefreshInterval = setInterval(() => {
+                if (selectedUserId) {
+                    loadConversationMessages();
+                }
+            }, 2000);
+        }
+
+        /**
+         * Load all users for conversation list
+         */
+        async function loadUsersList() {
+            try {
+                console.log('Loading users list...');
+                const response = await UniDiPay.apiRequest('faq.php?action=getUsers');
+                console.log('Users response:', response);
+                
+                const usersList = document.getElementById('usersList');
+                const userCountBadge = document.getElementById('userCountBadge');
+
+                if (response.success && response.data && Array.isArray(response.data) && response.data.length > 0) {
+                    const currentUser = getAdmin();
+                    console.log('Current user:', currentUser);
+                    
+                    const otherUsers = response.data.filter(u => u.id !== currentUser.id);
+                    console.log('Other users:', otherUsers);
+                    
+                    userCountBadge.textContent = otherUsers.length;
+
+                    if (otherUsers.length === 0) {
+                        usersList.innerHTML = `
+                            <div class="empty-state-list">
+                                <p><i class="fa-solid fa-user" aria-hidden="true"></i> No other users</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    usersList.innerHTML = otherUsers.map(user => `
+                        <div class="conversation-item" onclick="selectUser(${user.id}, '${escapeHtml(user.name)}', '${user.role}')">
+                            <div class="conv-avatar">${user.name.charAt(0).toUpperCase()}</div>
+                            <div class="conv-content">
+                                <div class="conv-name">${escapeHtml(user.name)}</div>
+                                <div class="conv-role">${user.role}</div>
+                            </div>
+                            <div class="conv-status ${user.role === 'manager' ? 'online' : 'offline'}"></div>
+                        </div>
+                    `).join('');
+                } else {
+                    console.warn('No users data or failed response:', response);
+                    userCountBadge.textContent = '0';
+                    usersList.innerHTML = `
+                        <div class="empty-state-list">
+                            <p><i class="fa-solid fa-inbox" aria-hidden="true"></i> ${response.error || 'No users available'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersList').innerHTML = `
+                    <div class="empty-state-list error">
+                        <p><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Select a user and load conversation
+         */
+        function selectUser(userId, userName, userRole) {
+            selectedUserId = userId;
+            selectedUserName = userName;
+            selectedUserRole = userRole;
+
+            // Update UI visibility
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('chatHeaderModern').style.display = 'flex';
+            document.getElementById('messagesContainer').style.display = 'flex';
+            document.getElementById('messageInputSection').style.display = 'flex';
+
+            // Update header
+            document.getElementById('selectedUserName').textContent = userName;
+            document.getElementById('selectedUserRole').textContent = userRole.toUpperCase();
+            document.getElementById('chatUserAvatar').textContent = userName.charAt(0).toUpperCase();
+
+            // Highlight selected
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+
+            // Load messages
+            loadConversationMessages();
+        }
+
+        /**
+         * Load messages between users
+         */
+        async function loadConversationMessages() {
+            if (!selectedUserId) return;
+
+            try {
+                const response = await UniDiPay.apiRequest(
+                    `faq.php?action=getConversation&user_id=${selectedUserId}`
+                );
+
+                if (response.success && response.data) {
+                    displayMessagesInChat(response.data);
+                } else {
+                    console.error('Failed to load messages:', response.error);
+                }
+            } catch (error) {
+                console.error('Error loading messages:', error);
+            }
+        }
+
+        /**
+         * Display messages in chat
+         */
+        function displayMessagesInChat(messages) {
+            const messagesArea = document.getElementById('messagesArea');
+            const currentUser = getAdmin();
+
+            if (!messages || messages.length === 0) {
+                messagesArea.innerHTML = `
+                    <div class="no-messages">
+                        <div class="no-messages-icon"><i class="fa-solid fa-hand" aria-hidden="true"></i></div>
+                        <p>Start a conversation!</p>
+                        <small>Send your first message below</small>
+                    </div>
+                `;
+                return;
+            }
+
+            messagesArea.innerHTML = messages.map(msg => {
+                const isSent = msg.sender_id === currentUser.id;
+                const timeStr = formatTime(msg.created_at);
+                return `
+                    <div class="message-group ${isSent ? 'sent' : 'received'}">
+                        <div class="message-bubble">
+                            <div class="message-text">${escapeHtml(msg.message_text)}</div>
+                            <div class="message-meta">
+                                <span class="message-sender">${escapeHtml(msg.sender_name)}</span>
+                                <span class="message-time">${timeStr}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Scroll to bottom
+            setTimeout(() => {
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }, 50);
+        }
+
+        /**
+         * Send message
+         */
+        async function handleSendMessage() {
+            if (!selectedUserId) {
+                UniDiPay.showError('Please select a user first');
+                return;
+            }
+
+            const messageInput = document.getElementById('messageInput');
+            const messageText = messageInput.value.trim();
+
+            if (!messageText) {
+                return;
+            }
+
+            const originalText = messageInput.value;
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            try {
+                console.log('Sending message to user:', selectedUserId);
+                const response = await UniDiPay.apiRequest('faq.php?action=sendMessage', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        recipient_id: selectedUserId,
+                        message_text: messageText
+                    })
+                });
+
+                console.log('Send response:', response);
+
+                if (response.success) {
+                    console.log('Message sent successfully');
+                    await loadConversationMessages();
+                    UniDiPay.showSuccess('Message sent! ✓');
+                } else {
+                    console.error('Send failed:', response.error);
+                    messageInput.value = originalText;
+                    UniDiPay.showError(response.error || 'Failed to send');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                messageInput.value = originalText;
+                UniDiPay.showError('Connection error: ' + error.message);
+            }
+        }
+
+        /**
+         * Search users
+         */
+        function handleUserSearch() {
+            const searchTerm = document.getElementById('userSearch').value.toLowerCase();
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                const nameEl = item.querySelector('.conv-name');
+                const name = nameEl ? nameEl.textContent.toLowerCase() : '';
+                item.style.display = name.includes(searchTerm) ? 'flex' : 'none';
+            });
+        }
+
+        /**
+         * Clear messages (for UI)
+         */
+        function clearMessages() {
+            if (confirm('Clear conversation history?')) {
+                document.getElementById('messagesArea').innerHTML = `
+                    <div class="no-messages">
+                        <div class="no-messages-icon"><i class="fa-solid fa-hand" aria-hidden="true"></i></div>
+                        <p>Conversation cleared</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * Escape HTML
+         */
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+
+        /**
+         * Format time
+         */
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+
+            if (diffMins < 1) return 'Now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            
+            const diffHours = Math.floor(diffMins / 60);
+            if (diffHours < 24) return `${diffHours}h ago`;
+
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (messageRefreshInterval) {
+                clearInterval(messageRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

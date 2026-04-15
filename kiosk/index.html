@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniDiPay Kiosk System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen active">
+        <div class="background-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+        </div>
+        
+        <div class="content-center">
+            <div class="logo-container">
+                <div class="logo-box">
+                    <div class="logo-icon">
+                        <img src="../assets/UNIDIPAY%20LOGO.png" alt="UniDiPay Logo" class="kiosk-brand-logo" data-kiosk-brand="start">
+                    </div>
+                    <span class="logo-text">UniDiPay</span>
+                </div>
+                <h1 class="welcome-title">Welcome to<br />UniDiPay Kiosk</h1>
+            </div>
+
+            <button class="btn-start" onclick="goToScreen('categoryScreen')">
+                <i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>
+                <span>Tap to Start</span>
+            </button>
+
+            <button class="btn-ghost" onclick="showOrderingFAQ()">
+                <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+                <span>How ordering works</span>
+            </button>
+
+            <p class="footer-text">
+                Order food quickly and easily<br />
+                Using your UniDiPay RFID card
+            </p>
+        </div>
+    </div>
+
+    <!-- Category Selection Screen -->
+    <div id="categoryScreen" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="back-button" onclick="goToScreen('startScreen')" aria-label="Back to Start">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <div class="header-logo">
+                    <div class="header-logo-icon">
+                        <img src="../assets/UNIDIPAY%20LOGO.png" alt="UniDiPay Logo" class="kiosk-brand-logo kiosk-brand-logo-small" data-kiosk-brand="header">
+                    </div>
+                </div>
+                <h1>Select Category</h1>
+            </div>
+            <button class="cart-button" onclick="goToCart()">
+                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                <span class="cart-badge" id="cartBadge">0</span>
+            </button>
+        </div>
+
+        <div class="categories-grid">
+            <button class="category-card category-meals" onclick="loadMenuItems('Meals')">
+                <div class="category-icon">
+                    <i class="fa-solid fa-utensils" aria-hidden="true"></i>
+                </div>
+                <span>Meals</span>
+            </button>
+
+            <button class="category-card category-drinks" onclick="loadMenuItems('Drinks')">
+                <div class="category-icon">
+                    <i class="fa-solid fa-mug-hot" aria-hidden="true"></i>
+                </div>
+                <span>Drinks</span>
+            </button>
+
+            <button class="category-card category-snacks" onclick="loadMenuItems('Snacks')">
+                <div class="category-icon">
+                    <i class="fa-solid fa-cookie-bite" aria-hidden="true"></i>
+                </div>
+                <span>Snacks</span>
+            </button>
+
+            <button class="category-card category-desserts" onclick="loadMenuItems('Desserts')">
+                <div class="category-icon">
+                    <i class="fa-solid fa-ice-cream" aria-hidden="true"></i>
+                </div>
+                <span>Desserts</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Menu Items Screen -->
+    <div id="menuScreen" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="back-button" onclick="goToScreen('categoryScreen')">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <h1 id="menuTitle">Menu Items</h1>
+            </div>
+            <button class="cart-button" onclick="goToCart()">
+                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                <span class="cart-badge" id="cartBadge2">0</span>
+            </button>
+        </div>
+
+        <div class="menu-items-grid" id="menuItemsContainer">
+           
+        </div>
+    </div>
+
+    <!-- Cart Screen -->
+    <div id="cartScreen" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="back-button" onclick="goBackFromCart()">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <h1>Your Order</h1>
+            </div>
+        </div>
+
+        <div class="cart-content" id="cartContent">
+            <!-- Cart items will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Payment Screen -->
+    <div id="paymentScreen" class="screen">
+        <div class="header">
+            <div class="header-left">
+                <button class="back-button" onclick="goToScreen('cartScreen')">
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                </button>
+                <h1>Payment</h1>
+            </div>
+        </div>
+
+        <div class="payment-content">
+            <div class="order-summary-box">
+                <div class="summary-row">
+                    <span>Order Type</span>
+                    <span id="paymentOrderType">-</span>
+                </div>
+
+
+                <div class="summary-row total-row">
+                    <span>Total Amount</span>
+                    <span id="paymentTotal" class="total-amount">₱0.00</span>
+                </div>
+            </div>
+
+            <div id="rfidPrompt" class="rfid-prompt">
+                <div class="rfid-animation">
+                    <div class="ripple ripple-1"></div>
+                    <div class="ripple ripple-2"></div>
+                    <div class="card-icon">
+                        <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+                    </div>
+                </div>
+                <h2>Tap Your UniDiPay Card</h2>
+                <p>Please hold your RFID card near the reader</p>
+            </div>
+
+            <div id="processingPrompt" class="processing-prompt" style="display: none;">
+                <div class="spinner"></div>
+                <h2>Processing Payment...</h2>
+                <p>Please wait</p>
+            </div>
+
+            <!-- Simulate Card Input -->
+            <div class="card-input-container is-hidden">
+                <input type="text" id="nfcCardInput" placeholder="Enter RFID Card ID (e.g., RFID001)" class="nfc-input">
+                <button class="btn-primary btn-full" onclick="processPayment()">Tap Card to Pay</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Screen -->
+    <div id="successScreen" class="screen">
+        <div class="background-shapes success-bg">
+            <div class="shape shape-success-1"></div>
+            <div class="shape shape-success-2"></div>
+        </div>
+
+        <div class="content-center">
+            <div class="success-icon-wrapper">
+                <div class="success-ripple"></div>
+                <div class="success-icon">
+                    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                </div>
+            </div>
+
+            <h1 class="success-title">Order Successful!</h1>
+
+            <div class="order-number-box">
+                <p>Your Order Number</p>
+                <div class="order-number" id="orderNumber">ORD-000000</div>
+            </div>
+
+            <div class="order-info-box">
+                <p>Please wait for your order to be prepared</p>
+                <p class="order-info-sub">You will be notified when your order is ready for pickup</p>
+            </div>
+
+            <div class="countdown-text">
+                Returning to start in <span id="countdown">10</span> seconds
+            </div>
+
+            <button class="btn-primary btn-large" onclick="resetKiosk()">Return to Start</button>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- Ordering FAQ Modal -->
+    <div id="orderingFaqModal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" onclick="hideOrderingFAQ()"></div>
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="faqTitle">
+            <div class="modal-header">
+                <h2 id="faqTitle"><i class="fa-solid fa-route" aria-hidden="true"></i> How ordering works</h2>
+                <button class="modal-close" aria-label="Close" onclick="hideOrderingFAQ()">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <ol class="faq-steps">
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i></span><span class="faq-step-text">Tap "Tap to Start" to open the kiosk.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-list" aria-hidden="true"></i></span><span class="faq-step-text">Select a category (Meals, Drinks, Snacks, Desserts) to view its items.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-plus" aria-hidden="true"></i></span><span class="faq-step-text">Tap "Add" on any item you want; you can switch categories and keep adding.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span><span class="faq-step-text">Open the cart (top right) to review your picks, change quantities, or remove items.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-utensils" aria-hidden="true"></i></span><span class="faq-step-text">Choose your order type: Dine In (eat here) or Take Out (to-go packaging).</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-receipt" aria-hidden="true"></i></span><span class="faq-step-text">Verify prices and totals in the cart; adjust items until the total is correct.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span><span class="faq-step-text">Tap "Proceed to Payment" to continue.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-credit-card" aria-hidden="true"></i></span><span class="faq-step-text">Tap your UniDiPay card on the reader or enter your RFID Card ID; make sure your balance covers the total.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-circle-check" aria-hidden="true"></i></span><span class="faq-step-text">Wait for "Processing Payment" and then "Order Successful"-your order number appears on screen.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i></span><span class="faq-step-text">Keep the order number for pickup; the kiosk will auto-reset after the countdown.</span></li>
+                    <li><span class="faq-step-icon"><i class="fa-solid fa-id-card" aria-hidden="true"></i></span><span class="faq-step-text">To claim your order, please show your Student ID to the staff when your order number is called.</span></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

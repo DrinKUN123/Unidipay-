@@ -1,0 +1,226 @@
+<?php
+/**
+ * Menu API
+ * CRUD operations for menu items
+ */
+
+require_once '../config/database.php';
+
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
+header('Access-Control-Allow-Headers: Content-Type');
+
+$method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? '';
+
+try {
+    switch ($method) {
+        case 'GET':
+            if ($action === 'all') {
+                getAllMenuItems();
+            } elseif ($action === 'single' && isset($_GET['id'])) {
+                getMenuItem($_GET['id']);
+            } elseif ($action === 'category' && isset($_GET['category'])) {
+                getMenuByCategory($_GET['category']);
+            } else {
+                getAllMenuItems();
+            }
+            break;
+            
+        case 'POST':
+            if (!isLoggedIn()) {
+                sendResponse(['error' => 'Unauthorized'], 401);
+            }
+            createMenuItem();
+            break;
+            
+        case 'PUT':
+            if (!isLoggedIn()) {
+                sendResponse(['error' => 'Unauthorized'], 401);
+            }
+            updateMenuItem();
+            break;
+            
+        case 'DELETE':
+            if (!isLoggedIn()) {
+                sendResponse(['error' => 'Unauthorized'], 401);
+            }
+            if (isset($_GET['id'])) {
+                deleteMenuItem($_GET['id']);
+            } else {
+                sendResponse(['error' => 'Menu item ID required'], 400);
+            }
+            break;
+            
+        default:
+            sendResponse(['error' => 'Method not allowed'], 405);
+    }
+} catch (Exception $e) {
+    sendResponse(['error' => $e->getMessage()], 500);
+}
+
+/**
+ * Get all menu items
+ */
+function getAllMenuItems() {
+    global $pdo;
+    
+    $stmt = $pdo->query("SELECT * FROM menu_items ORDER BY category, name");
+    $menuItems = $stmt->fetchAll();
+    
+    sendResponse(['menu_items' => $menuItems]);
+}
+
+/**
+ * Get single menu item
+ */
+function getMenuItem($id) {
+    global $pdo;
+    
+    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE id = ?");
+    $stmt->execute([$id]);
+    $item = $stmt->fetch();
+    
+    if (!$item) {
+        sendResponse(['error' => 'Menu item not found'], 404);
+    }
+    
+    sendResponse(['menu_item' => $item]);
+}
+
+/**
+ * Get menu items by category
+ */
+function getMenuByCategory($category) {
+    global $pdo;
+    
+    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE category = ? ORDER BY name");
+    $stmt->execute([sanitize($category)]);
+    $menuItems = $stmt->fetchAll();
+    
+    sendResponse(['menu_items' => $menuItems]);
+}
+
+/**
+ * Create new menu item
+ */
+function createMenuItem() {
+    global $pdo;
+    
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    $errors = validateRequired($data, ['name', 'category', 'price', 'description']);
+    if (!empty($errors)) {
+        sendResponse(['error' => implode(', ', $errors)], 400);
+    }
+    
+    $name = sanitize($data['name']);
+    $category = sanitize($data['category']);
+    $price = floatval($data['price']);
+    $description = sanitize($data['description']);
+    $imageUrl = sanitize($data['image_url'] ?? '');
+    $available = isset($data['available']) ? (bool)$data['available'] : true;
+    
+    if ($price < 0) {
+        sendResponse(['error' => 'Price must be 0 or greater'], 400);
+    }
+    
+    $stmt = $pdo->prepare("
+        INSERT INTO menu_items (name, category, price, description, image_url, available)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->execute([$name, $category, $price, $description, $imageUrl, $available]);
+    
+    $itemId = $pdo->lastInsertId();
+    
+    // Get created item
+    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE id = ?");
+    $stmt->execute([$itemId]);
+    $item = $stmt->fetch();
+    
+    sendResponse([
+        'success' => true,
+        'menu_item' => $item
+    ], 201);
+}
+
+/**
+ * Update menu item
+ */
+function updateMenuItem() {
+    global $pdo;
+    
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($data['id'])) {
+        sendResponse(['error' => 'Menu item ID required'], 400);
+    }
+    
+    $id = intval($data['id']);
+    
+    // Build update query dynamically
+    $fields = [];
+    $values = [];
+    
+    if (isset($data['name'])) {
+        $fields[] = "name = ?";
+        $values[] = sanitize($data['name']);
+    }
+    if (isset($data['category'])) {
+        $fields[] = "category = ?";
+        $values[] = sanitize($data['category']);
+    }
+    if (isset($data['price'])) {
+        $fields[] = "price = ?";
+        $values[] = floatval($data['price']);
+    }
+    if (isset($data['description'])) {
+        $fields[] = "description = ?";
+        $values[] = sanitize($data['description']);
+    }
+    if (isset($data['image_url'])) {
+        $fields[] = "image_url = ?";
+        $values[] = sanitize($data['image_url']);
+    }
+    if (isset($data['available'])) {
+        $fields[] = "available = ?";
+        $values[] = (bool)$data['available'];
+    }
+    
+    if (empty($fields)) {
+        sendResponse(['error' => 'No fields to update'], 400);
+    }
+    
+    $values[] = $id;
+    
+    $sql = "UPDATE menu_items SET " . implode(', ', $fields) . " WHERE id = ?";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($values);
+    
+    // Get updated item
+    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE id = ?");
+    $stmt->execute([$id]);
+    $item = $stmt->fetch();
+    
+    sendResponse([
+        'success' => true,
+        'menu_item' => $item
+    ]);
+}
+
+/**
+ * Delete menu item
+ */
+function deleteMenuItem($id) {
+    global $pdo;
+    
+    $stmt = $pdo->prepare("DELETE FROM menu_items WHERE id = ?");
+    $stmt->execute([$id]);
+    
+    if ($stmt->rowCount() === 0) {
+        sendResponse(['error' => 'Menu item not found'], 404);
+    }
+    
+    sendResponse(['success' => true]);
+}
+?>
