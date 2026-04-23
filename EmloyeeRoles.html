@@ -196,8 +196,32 @@
         </div>
     </div>
 
+    <!-- Delete Employee Confirmation Modal -->
+    <div id="deleteEmployeeModal" class="modal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="deleteEmployeeModalTitle">
+            <div class="modal-header">
+                <h3 id="deleteEmployeeModalTitle">Delete Employee</h3>
+                <button class="modal-close" id="closeDeleteEmployeeModal" aria-label="Close">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0; color: var(--gray-700);">Are you sure you want to delete this employee<span id="deleteEmployeeName"></span>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelDeleteEmployeeBtn" style="width: auto;">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmDeleteEmployeeBtn" style="width: auto; background: var(--danger); border-color: var(--danger); box-shadow: 0 10px 20px -14px rgba(239, 68, 68, 0.9);">
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    <span>Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
     <script>
+        let pendingDeleteEmployeeId = null;
+
         // Initialize page
         document.addEventListener('DOMContentLoaded', () => {
             UniDiPay.protectAdminPage().then(() => {
@@ -222,11 +246,28 @@
             document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
             document.getElementById('cancelEditBtn').addEventListener('click', closeEditModal);
             document.getElementById('editEmployeeForm').addEventListener('submit', handleEditEmployee);
+
+            // Delete Modal
+            document.getElementById('closeDeleteEmployeeModal').addEventListener('click', closeDeleteEmployeeModal);
+            document.getElementById('cancelDeleteEmployeeBtn').addEventListener('click', closeDeleteEmployeeModal);
+            document.getElementById('confirmDeleteEmployeeBtn').addEventListener('click', confirmDeleteEmployee);
             
             // Close modal on outside click
             document.getElementById('editModal').addEventListener('click', (e) => {
                 if (e.target.id === 'editModal') {
                     closeEditModal();
+                }
+            });
+
+            document.getElementById('deleteEmployeeModal').addEventListener('click', (e) => {
+                if (e.target.id === 'deleteEmployeeModal') {
+                    closeDeleteEmployeeModal();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('deleteEmployeeModal').classList.contains('show')) {
+                    closeDeleteEmployeeModal();
                 }
             });
         }
@@ -394,6 +435,66 @@
         }
 
         /**
+         * Open delete confirmation modal
+         */
+        function openDeleteEmployeeModal(employeeId) {
+            pendingDeleteEmployeeId = employeeId;
+
+            const nameTarget = document.getElementById('deleteEmployeeName');
+            const deleteBtn = document.querySelector(`button[onclick="deleteEmployee(${employeeId})"]`);
+            const employeeName = deleteBtn?.closest('tr')?.querySelector('td')?.textContent?.trim();
+            nameTarget.textContent = employeeName ? ` (${employeeName})` : '';
+
+            const modal = document.getElementById('deleteEmployeeModal');
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        /**
+         * Close delete confirmation modal
+         */
+        function closeDeleteEmployeeModal() {
+            pendingDeleteEmployeeId = null;
+            document.getElementById('deleteEmployeeName').textContent = '';
+            const modal = document.getElementById('deleteEmployeeModal');
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        /**
+         * Confirm and delete employee
+         */
+        async function confirmDeleteEmployee() {
+            if (!pendingDeleteEmployeeId) {
+                closeDeleteEmployeeModal();
+                return;
+            }
+
+            const employeeId = pendingDeleteEmployeeId;
+
+            try {
+                const response = await fetch(`php/api/EmloyeeRoles.php?action=delete&id=${employeeId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || 'Failed to delete employee');
+                }
+
+                closeDeleteEmployeeModal();
+                UniDiPay.showSuccess('Employee deleted successfully');
+                loadEmployeeList();
+                loadActivityLogs('Employee Role');
+
+            } catch (error) {
+                console.error('Error deleting employee:', error);
+                UniDiPay.showError('Error: ' + error.message);
+            }
+        }
+
+        /**
          * Handle edit employee form submission
          */
         async function handleEditEmployee(e) {
@@ -456,30 +557,8 @@
         /**
          * Delete employee
          */
-        async function deleteEmployee(employeeId) {
-            if (!confirm('Are you sure you want to delete this employee?')) {
-                return;
-            }
-            
-            try {
-                const response = await fetch(`php/api/EmloyeeRoles.php?action=delete&id=${employeeId}`, {
-                    method: 'DELETE'
-                });
-                
-                const result = await response.json();
-                
-                if (!result.success) {
-                    throw new Error(result.error || 'Failed to delete employee');
-                }
-                
-                UniDiPay.showSuccess('Employee deleted successfully');
-                loadEmployeeList();
-                loadActivityLogs('Employee Role');
-                
-            } catch (error) {
-                console.error('Error deleting employee:', error);
-                UniDiPay.showError('Error: ' + error.message);
-            }
+        function deleteEmployee(employeeId) {
+            openDeleteEmployeeModal(employeeId);
         }
     </script>
 </body>

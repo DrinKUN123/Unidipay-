@@ -189,42 +189,151 @@ function updateStudent() {
     if (!$beforeStudent) {
         sendResponse(['error' => 'Student not found'], 404);
     }
-    
-    // Build update query dynamically
-    $fields = [];
-    $values = [];
-    
-    if (isset($data['name'])) {
-        $fields[] = "name = ?";
-        $values[] = sanitize($data['name']);
+
+    $newStudentId = isset($data['student_id']) ? sanitize($data['student_id']) : null;
+    $newNfcCardId = isset($data['nfc_card_id']) ? sanitize($data['nfc_card_id']) : null;
+
+    try {
+        $pdo->beginTransaction();
+
+        // Build update query dynamically
+        $fields = [];
+        $values = [];
+
+        if (isset($data['name'])) {
+            $fields[] = "name = ?";
+            $values[] = sanitize($data['name']);
+        }
+
+        if ($newStudentId !== null) {
+            if ($newStudentId === '') {
+                throw new Exception('Student ID cannot be empty');
+            }
+
+            $stmt = $pdo->prepare("SELECT id FROM students WHERE student_id = ? AND id <> ? LIMIT 1");
+            $stmt->execute([$newStudentId, $id]);
+            if ($stmt->fetch()) {
+                throw new Exception('Student ID already exists');
+            }
+
+            $fields[] = "student_id = ?";
+            $values[] = $newStudentId;
+        }
+
+        if (isset($data['program'])) {
+            $fields[] = "program = ?";
+            $values[] = sanitize($data['program']);
+        }
+
+        if (isset($data['year_level'])) {
+            $fields[] = "year_level = ?";
+            $values[] = sanitize($data['year_level']);
+        }
+
+        if ($newNfcCardId !== null) {
+            if ($newNfcCardId === '') {
+                throw new Exception('RFID Card ID cannot be empty');
+            }
+
+            $stmt = $pdo->prepare("SELECT id FROM students WHERE nfc_card_id = ? AND id <> ? LIMIT 1");
+            $stmt->execute([$newNfcCardId, $id]);
+            if ($stmt->fetch()) {
+                throw new Exception('RFID Card ID already exists');
+            }
+
+            $oldNfcCardId = $beforeStudent['nfc_card_id'] ?? null;
+
+            if ($oldNfcCardId !== $newNfcCardId) {
+                // Lock target card row first to avoid duplicate assignment races.
+                $stmt = $pdo->prepare("SELECT id, student_id FROM nfc_cards WHERE id = ? FOR UPDATE");
+                $stmt->execute([$newNfcCardId]);
+                $targetCard = $stmt->fetch();
+
+                if ($targetCard && intval($targetCard['student_id']) !== $id) {
+                    throw new Exception('RFID Card ID already assigned to another student');
+                }
+
+                $oldCard = null;
+                if ($oldNfcCardId) {
+                    $stmt = $pdo->prepare("SELECT id, student_id, balance FROM nfc_cards WHERE id = ? FOR UPDATE");
+                    $stmt->execute([$oldNfcCardId]);
+                    $oldCard = $stmt->fetch();
+                }
+
+                if (!$targetCard) {
+                    if ($oldCard) {
+                        // Create the new card row first, then move FK references.
+                        $stmt = $pdo->prepare("INSERT INTO nfc_cards (id, student_id, balance) VALUES (?, ?, ?)");
+                        $stmt->execute([$newNfcCardId, $id, $oldCard['balance']]);
+                    } else {
+                        $stmt = $pdo->prepare("INSERT INTO nfc_cards (id, student_id, balance) VALUES (?, ?, 0)");
+                        $stmt->execute([$newNfcCardId, $id]);
+                    }
+                }
+
+                if ($oldCard) {
+                    // Move dependent rows to the new card ID to satisfy FK RESTRICT constraints.
+                    migrateCardReference($pdo, 'orders', 'nfc_card_id', $oldNfcCardId, $newNfcCardId);
+                    migrateCardReference($pdo, 'reloads', 'card_id', $oldNfcCardId, $newNfcCardId);
+                    migrateCardReference($pdo, 'transactions', 'card_id', $oldNfcCardId, $newNfcCardId);
+                    migrateCardReference($pdo, 'gcash_topups', 'card_id', $oldNfcCardId, $newNfcCardId);
+
+                    // Remove old card record after all dependencies are moved.
+                    $stmt = $pdo->prepare("DELETE FROM nfc_cards WHERE id = ?");
+                    $stmt->execute([$oldNfcCardId]);
+                }
+            }
+
+            $fields[] = "nfc_card_id = ?";
+            $values[] = $newNfcCardId;
+        }
+
+        if (empty($fields)) {
+            throw new Exception('No fields to update');
+        }
+
+        $values[] = $id;
+
+        $sql = "UPDATE students SET " . implode(', ', $fields) . " WHERE id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($values);
+
+        $pdo->commit();
+
+        // Get updated student snapshot and write activity log
+        $student = fetchStudentForLog($id);
+        logStudentChange('Edit', $beforeStudent, $student);
+
+        sendResponse([
+            'success' => true,
+            'student' => $student
+        ]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        sendResponse(['error' => $e->getMessage()], 400);
     }
-    if (isset($data['program'])) {
-        $fields[] = "program = ?";
-        $values[] = sanitize($data['program']);
+}
+
+/**
+ * Update dependent card ID references; tolerate optional tables in some environments.
+ */
+function migrateCardReference($pdo, $table, $column, $oldCardId, $newCardId) {
+    if ($oldCardId === $newCardId) {
+        return;
     }
-    if (isset($data['year_level'])) {
-        $fields[] = "year_level = ?";
-        $values[] = sanitize($data['year_level']);
+
+    try {
+        $sql = "UPDATE {$table} SET {$column} = ? WHERE {$column} = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$newCardId, $oldCardId]);
+    } catch (PDOException $e) {
+        // Optional tables may not exist on some deployments.
+        if ($e->getCode() !== '42S02') {
+            throw $e;
+        }
     }
-    
-    if (empty($fields)) {
-        sendResponse(['error' => 'No fields to update'], 400);
-    }
-    
-    $values[] = $id;
-    
-    $sql = "UPDATE students SET " . implode(', ', $fields) . " WHERE id = ?";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($values);
-    
-    // Get updated student snapshot and write activity log
-    $student = fetchStudentForLog($id);
-    logStudentChange('Edit', $beforeStudent, $student);
-    
-    sendResponse([
-        'success' => true,
-        'student' => $student
-    ]);
 }
 
 /**

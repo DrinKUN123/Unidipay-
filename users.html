@@ -182,6 +182,28 @@
         </div>
     </div>
 
+    <!-- Delete User Confirmation Modal -->
+    <div class="modal" id="deleteUserModal" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="deleteUserModalTitle">
+            <div class="modal-header">
+                <h3 class="modal-title" id="deleteUserModalTitle">Delete User</h3>
+                <button type="button" class="modal-close" id="closeDeleteUserModal" aria-label="Close">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteUserModalMessage" style="margin: 0; color: var(--gray-700);">Are you sure you want to delete this user?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelDeleteUserBtn" style="width: auto;">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmDeleteUserBtn" style="width: auto; background: var(--danger); border-color: var(--danger); box-shadow: 0 10px 20px -14px rgba(239, 68, 68, 0.9);">
+                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                    <span>Delete</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/main.js"></script>
     <script>
        const UniDiPay = window.UniDiPay;
@@ -193,6 +215,13 @@
 
         let students = [];
         let editingId = null;
+        let deletingId = null;
+
+        const deleteUserModal = document.getElementById('deleteUserModal');
+        const deleteUserModalMessage = document.getElementById('deleteUserModalMessage');
+        const closeDeleteUserModalBtn = document.getElementById('closeDeleteUserModal');
+        const cancelDeleteUserBtn = document.getElementById('cancelDeleteUserBtn');
+        const confirmDeleteUserBtn = document.getElementById('confirmDeleteUserBtn');
 
         function formatCardIdForDisplay(cardId) {
             return String(cardId || '').replace(/^NFC/i, 'RFID');
@@ -277,18 +306,55 @@
         };
 
         // Delete student
-        window.deleteStudent = async (id) => {
-            if (!confirm('Are you sure you want to delete this user?')) return;
-            
+        window.deleteStudent = (id) => {
+            deletingId = id;
+            const student = students.find(s => s.id == id);
+            const studentName = student ? ` (${student.name})` : '';
+            deleteUserModalMessage.textContent = `Are you sure you want to delete this user${studentName}?`;
+            deleteUserModal.classList.add('show');
+            deleteUserModal.setAttribute('aria-hidden', 'false');
+        };
+
+        function closeDeleteUserModal() {
+            deleteUserModal.classList.remove('show');
+            deleteUserModal.setAttribute('aria-hidden', 'true');
+            deletingId = null;
+        }
+
+        async function confirmDeleteUser() {
+            if (!deletingId) {
+                closeDeleteUserModal();
+                return;
+            }
+
+            const idToDelete = deletingId;
+
             try {
-                await apiRequest(`students.php?action=delete&id=${id}`, { method: 'DELETE' });
+                await apiRequest(`students.php?action=delete&id=${idToDelete}`, { method: 'DELETE' });
                 showSuccess('Student deleted successfully');
+                closeDeleteUserModal();
                 loadStudents();
                 loadActivityLogs('User');
             } catch (error) {
                 showError(error.message);
             }
-        };
+        }
+
+        closeDeleteUserModalBtn.addEventListener('click', closeDeleteUserModal);
+        cancelDeleteUserBtn.addEventListener('click', closeDeleteUserModal);
+        confirmDeleteUserBtn.addEventListener('click', confirmDeleteUser);
+
+        deleteUserModal.addEventListener('click', (event) => {
+            if (event.target === deleteUserModal) {
+                closeDeleteUserModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && deleteUserModal.classList.contains('show')) {
+                closeDeleteUserModal();
+            }
+        });
 
         // Close modal
         window.closeModal = () => {

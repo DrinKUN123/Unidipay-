@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
-import '../services/app_state.dart';
+import 'package:unidipay_mobile/services/app_state.dart';
+import 'package:unidipay_mobile/widgets/blurred_image_background.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -14,6 +15,34 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   String? _orderType;
   bool _placing = false;
+  bool _entered = false;
+
+  Widget _panIn({
+    required Widget child,
+    Offset begin = const Offset(0.06, 0),
+    Duration duration = const Duration(milliseconds: 420),
+  }) {
+    return AnimatedOpacity(
+      opacity: _entered ? 1 : 0,
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      child: AnimatedSlide(
+        offset: _entered ? Offset.zero : begin,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _entered = true);
+    });
+  }
 
   Future<void> _placeOrder() async {
     final app = context.read<AppState>();
@@ -59,71 +88,69 @@ class _CartScreenState extends State<CartScreen> {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 960;
 
-        final cartList = Expanded(
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: app.cart.isEmpty
-                ? Center(
-                    key: const ValueKey('cart-empty'),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        FaIcon(FontAwesomeIcons.cartShopping,
-                            size: 42, color: colorScheme.primary),
-                        const SizedBox(height: 10),
-                        const Text('Cart is empty'),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    key: const ValueKey('cart-list'),
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                    itemCount: app.cart.length,
-                    itemBuilder: (context, index) {
-                      final entry = app.cart[index];
-                      return TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: 1),
-                        duration: Duration(milliseconds: 200 + (index * 25)),
-                        curve: Curves.easeOutCubic,
-                        child: Card(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          child: ListTile(
-                            title: Text(entry.item.name),
-                            subtitle: Text(
-                                'PHP ${entry.item.price.toStringAsFixed(2)} x ${entry.quantity}'),
-                            trailing: SizedBox(
-                              width: 120,
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                    onPressed: () => app.updateCartQuantity(
-                                        entry.item.id, -1),
-                                    icon:
-                                        const Icon(Icons.remove_circle_outline),
-                                  ),
-                                  Text('${entry.quantity}'),
-                                  IconButton(
-                                    onPressed: () => app.updateCartQuantity(
-                                        entry.item.id, 1),
-                                    icon: const Icon(Icons.add_circle_outline),
-                                  ),
-                                ],
-                              ),
+        final cartList = AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: app.cart.isEmpty
+              ? Center(
+                  key: const ValueKey('cart-empty'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FaIcon(FontAwesomeIcons.cartShopping,
+                          size: 42, color: colorScheme.primary),
+                      const SizedBox(height: 10),
+                      const Text('Cart is empty'),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  key: const ValueKey('cart-list'),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                  itemCount: app.cart.length,
+                  itemBuilder: (context, index) {
+                    final entry = app.cart[index];
+                    return TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: Duration(milliseconds: 200 + (index * 25)),
+                      curve: Curves.easeOutCubic,
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        child: ListTile(
+                          title: Text(entry.item.name),
+                          subtitle: Text(
+                              'PHP ${entry.item.price.toStringAsFixed(2)} x ${entry.quantity}'),
+                          trailing: SizedBox(
+                            width: 120,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                IconButton(
+                                  onPressed: () => app.updateCartQuantity(
+                                      entry.item.id, -1),
+                                  icon:
+                                      const Icon(Icons.remove_circle_outline),
+                                ),
+                                Text('${entry.quantity}'),
+                                IconButton(
+                                  onPressed: () => app.updateCartQuantity(
+                                      entry.item.id, 1),
+                                  icon: const Icon(Icons.add_circle_outline),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        builder: (context, value, child) => Opacity(
-                          opacity: value,
-                          child: Transform.translate(
-                            offset: Offset(0, (1 - value) * 10),
-                            child: child,
-                          ),
+                      ),
+                      builder: (context, value, child) => Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, (1 - value) * 10),
+                          child: child,
                         ),
-                      );
-                    },
-                  ),
-          ),
+                      ),
+                    );
+                  },
+                ),
         );
 
         final checkoutPanel = Card(
@@ -233,79 +260,103 @@ class _CartScreenState extends State<CartScreen> {
           ),
         );
 
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1120),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            FaIcon(
-                              FontAwesomeIcons.cartFlatbedSuitcase,
-                              size: 16,
-                              color: colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Cart & Checkout',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: colorScheme.primary,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 7),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer
-                              .withValues(alpha: 0.7),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '$cartCount item(s)',
-                          style: TextStyle(
-                            color: colorScheme.onPrimaryContainer,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isWide)
-                  Expanded(
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const BlurredImageBackground(
+              assetPath: 'assets/images/PCU2024.jpg',
+              blurSigma: 16,
+              overlayOpacity: 0.5,
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: Column(
+                  children: [
+                _panIn(
+                  begin: const Offset(-0.05, 0),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                     child: Row(
                       children: [
-                        Expanded(child: cartList),
-                        SizedBox(
-                          width: 360,
-                          child: Align(
-                            alignment: Alignment.topCenter,
-                            child: checkoutPanel,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              FaIcon(
+                                FontAwesomeIcons.cartFlatbedSuitcase,
+                                size: 16,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Cart & Checkout',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: colorScheme.primary,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: colorScheme.primaryContainer
+                                .withValues(alpha: 0.7),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '$cartCount item(s)',
+                            style: TextStyle(
+                              color: colorScheme.onPrimaryContainer,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
                     ),
+                  ),
+                ),
+                if (isWide)
+                  Expanded(
+                    child: _panIn(
+                      duration: const Duration(milliseconds: 520),
+                      child: Row(
+                        children: [
+                          Expanded(child: cartList),
+                          SizedBox(
+                            width: 360,
+                            child: Align(
+                              alignment: Alignment.topCenter,
+                              child: checkoutPanel,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   )
                 else ...[
-                  cartList,
-                  checkoutPanel,
+                  Expanded(
+                    child: _panIn(
+                      duration: const Duration(milliseconds: 520),
+                      child: cartList,
+                    ),
+                  ),
+                  _panIn(
+                    duration: const Duration(milliseconds: 560),
+                    child: checkoutPanel,
+                  ),
                 ],
               ],
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );

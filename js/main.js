@@ -143,6 +143,101 @@ async function logout() {
     }
 }
 
+let logoutConfirmResolver = null;
+
+function closeLogoutConfirmModal(confirmed = false) {
+    const modal = document.getElementById('logoutConfirmModal');
+    if (!modal) return;
+
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+
+    if (logoutConfirmResolver) {
+        logoutConfirmResolver(confirmed);
+        logoutConfirmResolver = null;
+    }
+}
+
+function ensureLogoutConfirmModal() {
+    let modal = document.getElementById('logoutConfirmModal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'logoutConfirmModal';
+    modal.className = 'modal';
+    modal.setAttribute('aria-hidden', 'true');
+    modal.innerHTML = `
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="logoutConfirmTitle">
+            <div class="modal-header">
+                <h3 id="logoutConfirmTitle">Confirm Logout</h3>
+                <button type="button" class="modal-close" id="logoutConfirmClose" aria-label="Close">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p style="margin: 0; color: var(--gray-700);">Are you sure you want to log out?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="logoutConfirmCancel" style="width: auto;">Cancel</button>
+                <button type="button" class="btn btn-primary" id="logoutConfirmProceed" style="width: auto;">
+                    <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeBtn = document.getElementById('logoutConfirmClose');
+    const cancelBtn = document.getElementById('logoutConfirmCancel');
+    const proceedBtn = document.getElementById('logoutConfirmProceed');
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => closeLogoutConfirmModal(false));
+    }
+
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => closeLogoutConfirmModal(false));
+    }
+
+    if (proceedBtn) {
+        proceedBtn.addEventListener('click', () => closeLogoutConfirmModal(true));
+    }
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeLogoutConfirmModal(false);
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal.classList.contains('show')) {
+            closeLogoutConfirmModal(false);
+        }
+    });
+
+    return modal;
+}
+
+function showLogoutConfirmModal() {
+    const modal = ensureLogoutConfirmModal();
+    const proceedBtn = document.getElementById('logoutConfirmProceed');
+
+    if (logoutConfirmResolver) {
+        logoutConfirmResolver(false);
+    }
+
+    return new Promise((resolve) => {
+        logoutConfirmResolver = resolve;
+        modal.classList.add('show');
+        modal.setAttribute('aria-hidden', 'false');
+        if (proceedBtn) {
+            proceedBtn.focus();
+        }
+    });
+}
+
 /**
  * Make authenticated API request
  */
@@ -533,9 +628,11 @@ function initDashboard() {
     // Setup logout button
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
+        logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            logout();
+            const isConfirmed = await showLogoutConfirmModal();
+            if (!isConfirmed) return;
+            await logout();
         });
     }
     
@@ -736,7 +833,7 @@ const Menu = {
         checkbox.type = 'checkbox';
         checkbox.checked = !!item.available;
         checkbox.addEventListener('change', (e) => {
-            this.toggleAvailability(item.id, e.target.checked);
+            this.toggleAvailability(item.id, e.target.checked, e.target);
         });
 
         const slider = document.createElement('span');
@@ -763,7 +860,7 @@ const Menu = {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'btn-delete';
         deleteBtn.textContent = 'Delete';
-        deleteBtn.addEventListener('click', () => this.deleteItem(item.id));
+        deleteBtn.addEventListener('click', () => this.deleteItem(item.id, item.name));
 
         actions.appendChild(editBtn);
         actions.appendChild(deleteBtn);
@@ -813,15 +910,124 @@ const Menu = {
         document.getElementById('menuModal').classList.add('show');
     },
 
-    deleteItem: async id => {
-        if (!confirm('Delete menu item?')) return;
+    closeDeleteConfirmModal(confirmed = false) {
+        const modal = document.getElementById('menuDeleteModal');
+        if (!modal) return;
+
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+
+        if (this.deleteConfirmResolver) {
+            this.deleteConfirmResolver(confirmed);
+            this.deleteConfirmResolver = null;
+        }
+    },
+
+    ensureDeleteConfirmModal() {
+        let modal = document.getElementById('menuDeleteModal');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'menuDeleteModal';
+        modal.className = 'modal';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.innerHTML = `
+            <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="menuDeleteModalTitle">
+                <div class="modal-header">
+                    <h3 id="menuDeleteModalTitle">Delete Menu Item</h3>
+                    <button type="button" class="modal-close" id="closeMenuDeleteModal" aria-label="Close">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="menuDeleteMessage" style="margin: 0; color: var(--gray-700);">Are you sure you want to delete this menu item?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancelMenuDeleteBtn" style="width: auto;">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmMenuDeleteBtn" style="width: auto; background: var(--danger); border-color: var(--danger); box-shadow: 0 10px 20px -14px rgba(239, 68, 68, 0.9);">
+                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                        <span>Delete</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        document.getElementById('closeMenuDeleteModal')?.addEventListener('click', () => this.closeDeleteConfirmModal(false));
+        document.getElementById('cancelMenuDeleteBtn')?.addEventListener('click', () => this.closeDeleteConfirmModal(false));
+        document.getElementById('confirmMenuDeleteBtn')?.addEventListener('click', () => this.closeDeleteConfirmModal(true));
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                this.closeDeleteConfirmModal(false);
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && modal.classList.contains('show')) {
+                this.closeDeleteConfirmModal(false);
+            }
+        });
+
+        return modal;
+    },
+
+    showDeleteConfirmModal(itemName = '') {
+        const modal = this.ensureDeleteConfirmModal();
+        const messageEl = document.getElementById('menuDeleteMessage');
+        const confirmBtn = document.getElementById('confirmMenuDeleteBtn');
+        const suffix = itemName ? ` "${itemName}"` : '';
+
+        if (messageEl) {
+            messageEl.textContent = `Are you sure you want to delete menu item${suffix}?`;
+        }
+
+        if (this.deleteConfirmResolver) {
+            this.deleteConfirmResolver(false);
+        }
+
+        return new Promise((resolve) => {
+            this.deleteConfirmResolver = resolve;
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+
+            if (confirmBtn) {
+                confirmBtn.focus();
+            }
+        });
+    },
+
+    deleteItem: async (id, itemName = '') => {
+        const confirmed = await Menu.showDeleteConfirmModal(itemName);
+        if (!confirmed) return;
 
         await UniDiPay.apiRequest(`menu.php?id=${id}`, { method: 'DELETE' });
         UniDiPay.showSuccess('Menu item deleted');
-        Menu.loadMenuItems('all');
+
+        const activeFilter = document.querySelector('.filter-btn.active');
+        const current = activeFilter?.dataset.category || 'all';
+        Menu.loadMenuItems(current);
     },
 
-    toggleAvailability: async (id, status) => {
+    updateAvailabilityVisual(toggleEl, isAvailable) {
+        if (!toggleEl) return;
+
+        toggleEl.checked = !!isAvailable;
+
+        const availabilityWrap = toggleEl.closest('.availability');
+        const statusText = availabilityWrap?.querySelector('.status-text');
+        if (!statusText) return;
+
+        statusText.classList.remove('available', 'unavailable');
+        statusText.classList.add(isAvailable ? 'available' : 'unavailable');
+        statusText.textContent = isAvailable ? 'Available' : 'Unavailable';
+    },
+
+    toggleAvailability: async (id, status, toggleEl = null) => {
+        // Optimistically update the visual state without reloading the whole page.
+        Menu.updateAvailabilityVisual(toggleEl, status);
+
         try {
             await UniDiPay.apiRequest('menu.php', {
                 method: 'PUT',
@@ -833,11 +1039,9 @@ const Menu = {
 
             UniDiPay.showSuccess(status ? 'Item set to Available' : 'Item set to Unavailable');
 
-            const activeFilter = document.querySelector('.filter-btn.active');
-            const current = activeFilter?.dataset.category || 'all';
-            Menu.loadMenuItems(current);
-
         } catch (err) {
+            // Revert visual state if the API update fails.
+            Menu.updateAvailabilityVisual(toggleEl, !status);
             UniDiPay.showError('Failed to update availability');
             console.error(err);
         }

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
-import '../models/order.dart';
-import '../services/app_state.dart';
+import 'package:unidipay_mobile/models/order.dart';
+import 'package:unidipay_mobile/services/app_state.dart';
+import 'package:unidipay_mobile/widgets/blurred_image_background.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -14,6 +15,25 @@ class OrdersScreen extends StatefulWidget {
 
 class _OrdersScreenState extends State<OrdersScreen> {
   late Future<List<OrderModel>> _future;
+  bool _entered = false;
+
+  Widget _panIn({
+    required Widget child,
+    Offset begin = const Offset(0.06, 0),
+    Duration duration = const Duration(milliseconds: 420),
+  }) {
+    return AnimatedOpacity(
+      opacity: _entered ? 1 : 0,
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      child: AnimatedSlide(
+        offset: _entered ? Offset.zero : begin,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        child: child,
+      ),
+    );
+  }
 
   String _normalizeStatus(String status) {
     return status.trim().toLowerCase();
@@ -103,17 +123,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
 
     if (shouldCancel != true) return;
+    if (!mounted || !sheetContext.mounted) return;
+
+    final appState = context.read<AppState>();
+    final messenger = ScaffoldMessenger.of(context);
+    final sheetNavigator = Navigator.of(sheetContext);
 
     try {
-      await context.read<AppState>().cancelOrder(orderId: order.id);
-      if (!mounted) return;
+      await appState.cancelOrder(orderId: order.id);
+      if (!mounted || !sheetNavigator.mounted) return;
 
-      Navigator.of(sheetContext).pop();
+      sheetNavigator.pop();
       setState(() {
-        _future = context.read<AppState>().fetchOrders();
+        _future = appState.fetchOrders();
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text('Order #${order.id} cancelled.')),
       );
     } catch (e) {
@@ -356,6 +381,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void initState() {
     super.initState();
     _future = context.read<AppState>().fetchOrders();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _entered = true);
+    });
   }
 
   @override
@@ -366,298 +395,321 @@ class _OrdersScreenState extends State<OrdersScreen> {
       builder: (context, constraints) {
         final isWide = constraints.maxWidth >= 900;
 
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1120),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                FaIcon(
-                                  FontAwesomeIcons.clockRotateLeft,
-                                  size: 16,
-                                  color: colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Order History',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleLarge
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.w800,
-                                        color: colorScheme.primary,
-                                      ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'View your previous purchases and payment status',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.copyWith(
-                                    color: colorScheme.onSurface,
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const BlurredImageBackground(
+              assetPath: 'assets/images/PCU2024.jpg',
+              blurSigma: 16,
+              overlayOpacity: 0.5,
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: Column(
+                  children: [
+                _panIn(
+                  begin: const Offset(-0.05, 0),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  FaIcon(
+                                    FontAwesomeIcons.clockRotateLeft,
+                                    size: 16,
+                                    color: colorScheme.primary,
                                   ),
-                            ),
-                          ],
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Order History',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleLarge
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: colorScheme.primary,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'View your previous purchases and payment status',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: colorScheme.onSurface,
+                                    ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 Expanded(
-                  child: FutureBuilder<List<OrderModel>>(
-                    future: _future,
-                    builder: (context, snapshot) {
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        child: snapshot.connectionState ==
-                                ConnectionState.waiting
-                            ? const Center(
-                                key: ValueKey('orders-loading'),
-                                child: CircularProgressIndicator(),
-                              )
-                            : snapshot.hasError
-                                ? Center(
-                                    key: const ValueKey('orders-error'),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(24),
-                                      child: Text(
-                                        'Failed to load orders:\n${snapshot.error}',
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  )
-                                : (snapshot.data ?? []).isEmpty
-                                    ? Center(
-                                        key: const ValueKey('orders-empty'),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            FaIcon(FontAwesomeIcons.receipt,
-                                                size: 52,
-                                                color: colorScheme.primary),
-                                            const SizedBox(height: 10),
-                                            Text(
-                                              'No orders found',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium
-                                                  ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w700),
-                                            ),
-                                          ],
+                  child: _panIn(
+                    duration: const Duration(milliseconds: 520),
+                    child: FutureBuilder<List<OrderModel>>(
+                      future: _future,
+                      builder: (context, snapshot) {
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: snapshot.connectionState ==
+                                  ConnectionState.waiting
+                              ? const Center(
+                                  key: ValueKey('orders-loading'),
+                                  child: CircularProgressIndicator(),
+                                )
+                              : snapshot.hasError
+                                  ? Center(
+                                      key: const ValueKey('orders-error'),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24),
+                                        child: Text(
+                                          'Failed to load orders:\n${snapshot.error}',
+                                          textAlign: TextAlign.center,
                                         ),
-                                      )
-                                    : RefreshIndicator(
-                                        key: const ValueKey('orders-list'),
-                                        onRefresh: () async {
-                                          setState(() {
-                                            _future = context
-                                                .read<AppState>()
-                                                .fetchOrders();
-                                          });
-                                          await _future;
-                                        },
-                                        child: GridView.builder(
-                                          padding: const EdgeInsets.fromLTRB(
-                                              16, 0, 16, 16),
-                                          itemCount:
-                                              (snapshot.data ?? []).length,
-                                          gridDelegate:
-                                              SliverGridDelegateWithFixedCrossAxisCount(
-                                            crossAxisCount: isWide ? 2 : 1,
-                                            mainAxisExtent: 128,
-                                            crossAxisSpacing: 10,
-                                            mainAxisSpacing: 10,
-                                          ),
-                                          itemBuilder: (context, index) {
-                                            final order =
-                                                (snapshot.data ?? [])[index];
-                                            final isCancelled =
-                                                _isCancelledStatus(
-                                                    order.status);
-                                            final statusLabel =
-                                                _statusLabel(order.status);
-                                            final statusBg = _statusBgColor(
-                                                colorScheme, order.status);
-                                            final statusFg = _statusFgColor(
-                                                colorScheme, order.status);
-                                            return TweenAnimationBuilder<
-                                                double>(
-                                              tween: Tween(begin: 0, end: 1),
-                                              duration: Duration(
-                                                  milliseconds:
-                                                      200 + (index * 25)),
-                                              curve: Curves.easeOutCubic,
-                                              child: Card(
-                                                elevation: 1.5,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                ),
-                                                child: ListTile(
-                                                  enabled: !isCancelled,
-                                                  onTap: isCancelled
-                                                      ? null
-                                                      : () => _showOrderDetails(
-                                                          order),
-                                                  contentPadding:
-                                                      const EdgeInsets
-                                                          .symmetric(
-                                                          horizontal: 16,
-                                                          vertical: 8),
-                                                  leading: CircleAvatar(
-                                                    backgroundColor: colorScheme
-                                                        .primaryContainer,
-                                                    child: FaIcon(
-                                                      FontAwesomeIcons
-                                                          .clipboardCheck,
-                                                      size: 14,
-                                                      color: colorScheme
-                                                          .onPrimaryContainer,
-                                                    ),
-                                                  ),
-                                                  title: Text(
-                                                    'Order #${order.id}',
-                                                    style: const TextStyle(
+                                      ),
+                                    )
+                                  : (snapshot.data ?? []).isEmpty
+                                      ? Center(
+                                          key: const ValueKey('orders-empty'),
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              FaIcon(FontAwesomeIcons.receipt,
+                                                  size: 52,
+                                                  color: colorScheme.primary),
+                                              const SizedBox(height: 10),
+                                              Text(
+                                                'No orders found',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
                                                         fontWeight:
                                                             FontWeight.w700),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : RefreshIndicator(
+                                          key: const ValueKey('orders-list'),
+                                          onRefresh: () async {
+                                            setState(() {
+                                              _future = context
+                                                  .read<AppState>()
+                                                  .fetchOrders();
+                                            });
+                                            await _future;
+                                          },
+                                          child: GridView.builder(
+                                            padding: const EdgeInsets.fromLTRB(
+                                                16, 0, 16, 16),
+                                            itemCount:
+                                                (snapshot.data ?? []).length,
+                                            gridDelegate:
+                                                SliverGridDelegateWithFixedCrossAxisCount(
+                                              crossAxisCount: isWide ? 2 : 1,
+                                              mainAxisExtent: 128,
+                                              crossAxisSpacing: 10,
+                                              mainAxisSpacing: 10,
+                                            ),
+                                            itemBuilder: (context, index) {
+                                              final order =
+                                                  (snapshot.data ?? [])[index];
+                                              final isCancelled =
+                                                  _isCancelledStatus(
+                                                      order.status);
+                                              final statusLabel =
+                                                  _statusLabel(order.status);
+                                              final statusBg = _statusBgColor(
+                                                  colorScheme, order.status);
+                                              final statusFg = _statusFgColor(
+                                                  colorScheme, order.status);
+                                              return TweenAnimationBuilder<
+                                                  double>(
+                                                tween: Tween(begin: 0, end: 1),
+                                                duration: Duration(
+                                                    milliseconds:
+                                                        200 + (index * 25)),
+                                                curve: Curves.easeOutCubic,
+                                                child: Card(
+                                                  elevation: 1.5,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20),
                                                   ),
-                                                  subtitle:
-                                                      Text(order.createdAt),
-                                                  trailing: Column(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .center,
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.end,
-                                                    children: [
-                                                      Text(
-                                                        'PHP ${order.total.toStringAsFixed(2)}',
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          color: isCancelled
-                                                              ? colorScheme
-                                                                  .onSurfaceVariant
-                                                              : null,
-                                                        ),
+                                                  child: ListTile(
+                                                    enabled: !isCancelled,
+                                                    onTap: isCancelled
+                                                        ? null
+                                                        : () =>
+                                                            _showOrderDetails(
+                                                                order),
+                                                    contentPadding:
+                                                        const EdgeInsets
+                                                            .symmetric(
+                                                            horizontal: 16,
+                                                            vertical: 8),
+                                                    leading: CircleAvatar(
+                                                      backgroundColor:
+                                                          colorScheme
+                                                              .primaryContainer,
+                                                      child: FaIcon(
+                                                        FontAwesomeIcons
+                                                            .clipboardCheck,
+                                                        size: 14,
+                                                        color: colorScheme
+                                                            .onPrimaryContainer,
                                                       ),
-                                                      const SizedBox(height: 4),
-                                                      isCancelled
-                                                          ? Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          8,
-                                                                      vertical:
-                                                                          3),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: colorScheme
-                                                                    .errorContainer,
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            999),
-                                                              ),
-                                                              child: Row(
-                                                                mainAxisSize:
-                                                                    MainAxisSize
-                                                                        .min,
-                                                                children: [
-                                                                  Icon(
-                                                                    Icons.block,
-                                                                    size: 11,
-                                                                    color: colorScheme
-                                                                        .onErrorContainer,
-                                                                  ),
-                                                                  const SizedBox(
-                                                                      width: 4),
-                                                                  Text(
-                                                                    'Cancelled',
-                                                                    style:
-                                                                        TextStyle(
+                                                    ),
+                                                    title: Text(
+                                                      'Order #${order.id}',
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w700),
+                                                    ),
+                                                    subtitle:
+                                                        Text(order.createdAt),
+                                                    trailing: Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .end,
+                                                      children: [
+                                                        Text(
+                                                          'PHP ${order.total.toStringAsFixed(2)}',
+                                                          style: TextStyle(
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .w800,
+                                                            color: isCancelled
+                                                                ? colorScheme
+                                                                    .onSurfaceVariant
+                                                                : null,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        isCancelled
+                                                            ? Container(
+                                                                padding: const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        8,
+                                                                    vertical:
+                                                                        3),
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: colorScheme
+                                                                      .errorContainer,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              999),
+                                                                ),
+                                                                child: Row(
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
+                                                                  children: [
+                                                                    Icon(
+                                                                      Icons
+                                                                          .block,
+                                                                      size: 11,
                                                                       color: colorScheme
                                                                           .onErrorContainer,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w800,
-                                                                      fontSize:
-                                                                          11,
                                                                     ),
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            )
-                                                          : Container(
-                                                              padding:
-                                                                  const EdgeInsets
-                                                                      .symmetric(
-                                                                      horizontal:
-                                                                          8,
-                                                                      vertical:
-                                                                          3),
-                                                              decoration:
-                                                                  BoxDecoration(
-                                                                color: statusBg,
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            999),
-                                                              ),
-                                                              child: Text(
-                                                                statusLabel,
-                                                                style:
-                                                                    TextStyle(
+                                                                    const SizedBox(
+                                                                        width:
+                                                                            4),
+                                                                    Text(
+                                                                      'Cancelled',
+                                                                      style:
+                                                                          TextStyle(
+                                                                        color:
+                                                                            colorScheme.onErrorContainer,
+                                                                        fontWeight:
+                                                                            FontWeight.w800,
+                                                                        fontSize:
+                                                                            11,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              )
+                                                            : Container(
+                                                                padding: const EdgeInsets
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        8,
+                                                                    vertical:
+                                                                        3),
+                                                                decoration:
+                                                                    BoxDecoration(
                                                                   color:
-                                                                      statusFg,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                  fontSize: 11,
+                                                                      statusBg,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              999),
+                                                                ),
+                                                                child: Text(
+                                                                  statusLabel,
+                                                                  style:
+                                                                      TextStyle(
+                                                                    color:
+                                                                        statusFg,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w700,
+                                                                    fontSize:
+                                                                        11,
+                                                                  ),
                                                                 ),
                                                               ),
-                                                            ),
-                                                    ],
+                                                      ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                              builder:
-                                                  (context, value, child) =>
-                                                      Opacity(
-                                                opacity: value,
-                                                child: Transform.translate(
-                                                  offset: Offset(
-                                                      0, (1 - value) * 10),
-                                                  child: child,
+                                                builder:
+                                                    (context, value, child) =>
+                                                        Opacity(
+                                                  opacity: value,
+                                                  child: Transform.translate(
+                                                    offset: Offset(
+                                                        0, (1 - value) * 10),
+                                                    child: child,
+                                                  ),
                                                 ),
-                                              ),
-                                            );
-                                          },
+                                              );
+                                            },
+                                          ),
                                         ),
-                                      ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );

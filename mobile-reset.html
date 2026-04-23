@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniDiPay Password Reset</title>
+  <style>
+    :root {
+      --bg1: #f6f9f7;
+      --bg2: #e9f2ec;
+      --card: #ffffff;
+      --text: #173228;
+      --muted: #4f6f63;
+      --accent: #0d7c59;
+      --accent-dark: #09583f;
+      --danger: #b42318;
+      --ok: #0f8f3e;
+      --border: #d6e4dc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: radial-gradient(circle at top right, var(--bg2), var(--bg1));
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 16px;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 18px 40px rgba(23, 50, 40, 0.12);
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      line-height: 1.2;
+    }
+
+    p {
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .group {
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.95rem;
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(13, 124, 89, 0.18);
+    }
+
+    .hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .status {
+      margin-top: 14px;
+      font-size: 0.92rem;
+      font-weight: 600;
+      min-height: 20px;
+    }
+
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+
+    button {
+      margin-top: 16px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 12px 14px;
+      cursor: pointer;
+      width: 100%;
+    }
+
+    button:hover { background: var(--accent-dark); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Reset Your UniDiPay Password</h1>
+    <p>Use this secure form to set a new password. The reset link expires in 15 minutes.</p>
+
+    <div id="tokenState" class="status"></div>
+
+    <form id="resetForm" class="hidden" novalidate>
+      <div class="group">
+        <label for="token">Reset Token</label>
+        <input id="token" name="token" autocomplete="off" required />
+      </div>
+
+      <div class="group">
+        <label for="new_password">New Password</label>
+        <input id="new_password" name="new_password" type="password" required />
+      </div>
+
+      <div class="group">
+        <label for="confirm_password">Confirm Password</label>
+        <input id="confirm_password" name="confirm_password" type="password" required />
+      </div>
+
+      <div class="hint">
+        Password must be at least 10 characters and include uppercase, lowercase, number, and special character.
+      </div>
+
+      <button id="submitBtn" type="submit">Update Password</button>
+    </form>
+  </section>
+
+  <script>
+    const apiBase = '/unidipaypro/php/api/mobile/auth.php';
+    const url = new URL(window.location.href);
+    const params = url.searchParams;
+
+    const tokenInput = document.getElementById('token');
+    const newPasswordInput = document.getElementById('new_password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const resetForm = document.getElementById('resetForm');
+    const tokenState = document.getElementById('tokenState');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function setState(message, type) {
+      tokenState.textContent = message || '';
+      tokenState.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    function passwordRuleError(password) {
+      if (password.length < 10) return 'Password must be at least 10 characters.';
+      if (!/[A-Z]/.test(password)) return 'Password needs at least one uppercase letter.';
+      if (!/[a-z]/.test(password)) return 'Password needs at least one lowercase letter.';
+      if (!/[0-9]/.test(password)) return 'Password needs at least one number.';
+      if (!/[^A-Za-z0-9]/.test(password)) return 'Password needs at least one special character.';
+      return null;
+    }
+
+    async function validateToken(token) {
+      const response = await fetch(`${apiBase}?action=validate_reset_token&token=${encodeURIComponent(token)}`);
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || payload.valid !== true) {
+        throw new Error(payload.error || 'Invalid or expired token.');
+      }
+
+      return payload;
+    }
+
+    async function resetPassword(token, newPassword, confirmPassword) {
+      const response = await fetch(`${apiBase}?action=reset_password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          new_password: newPassword,
+          confirm_password: confirmPassword
+        })
+      });
+
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success !== true) {
+        throw new Error(payload.error || 'Unable to reset password.');
+      }
+    }
+
+    async function bootstrap() {
+      const rawToken = params.get('token') || '';
+      tokenInput.value = rawToken;
+
+      if (!rawToken) {
+        setState('Missing token in URL. Open the full reset link from your email.', 'error');
+        return;
+      }
+
+      try {
+        const payload = await validateToken(rawToken);
+        setState(`Token verified for ${payload.email_hint}.`, 'ok');
+        resetForm.classList.remove('hidden');
+      } catch (error) {
+        setState(error.message, 'error');
+      }
+    }
+
+    resetForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const token = tokenInput.value.trim();
+      const newPassword = newPasswordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+
+      if (!token) {
+        setState('Reset token is required.', 'error');
+        return;
+      }
+
+      const ruleError = passwordRuleError(newPassword);
+      if (ruleError) {
+        setState(ruleError, 'error');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setState('Password confirmation does not match.', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setState('Updating password...', '');
+
+      try {
+        await resetPassword(token, newPassword, confirmPassword);
+        setState('Password reset successful. Return to the UniDiPay mobile app and sign in.', 'ok');
+        resetForm.classList.add('hidden');
+      } catch (error) {
+        setState(error.message, 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+
+    bootstrap();
+  </script>
+</body>
+</html>

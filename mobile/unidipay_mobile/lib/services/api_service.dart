@@ -13,13 +13,21 @@ class ApiService {
   );
   static const String _definedLanFallbackBaseUrl = String.fromEnvironment(
     'UNIDIPAY_LAN_FALLBACK',
-    defaultValue: 'http://192.168.1.17/unidipaypro/php/api/mobile/',
+    defaultValue: '',
   );
 
   static const String _usbReverseBaseUrl =
       'http://127.0.0.1:8080/unidipaypro/php/api/mobile/';
   static const String _usbReverseBaseUrlPort80 =
       'http://127.0.0.1/unidipaypro/php/api/mobile/';
+    static const String _androidEmulatorBaseUrl =
+      'http://10.0.2.2:8080/unidipaypro/php/api/mobile/';
+    static const String _androidEmulatorBaseUrlPort80 =
+      'http://10.0.2.2/unidipaypro/php/api/mobile/';
+    static const String _genymotionBaseUrl =
+      'http://10.0.3.2:8080/unidipaypro/php/api/mobile/';
+    static const String _genymotionBaseUrlPort80 =
+      'http://10.0.3.2/unidipaypro/php/api/mobile/';
   static const Duration _requestTimeout = Duration(seconds: 6);
   static String? _activeBaseUrl;
 
@@ -39,9 +47,23 @@ class ApiService {
     final lanCandidates = _lanFallbackCandidates;
 
     if (Platform.isAndroid) {
-      return [_usbReverseBaseUrl, _usbReverseBaseUrlPort80, ...lanCandidates];
+      final androidCandidates = <String>[
+        _usbReverseBaseUrl,
+        _usbReverseBaseUrlPort80,
+        _androidEmulatorBaseUrl,
+        _androidEmulatorBaseUrlPort80,
+        _genymotionBaseUrl,
+        _genymotionBaseUrlPort80,
+        ...lanCandidates,
+      ];
+      return androidCandidates.toSet().toList();
     }
-    return [_usbReverseBaseUrlPort80, _usbReverseBaseUrl, ...lanCandidates];
+    final defaults = <String>[
+      _usbReverseBaseUrlPort80,
+      _usbReverseBaseUrl,
+      ...lanCandidates,
+    ];
+    return defaults.toSet().toList();
   }
 
   static List<String> get _lanFallbackCandidates {
@@ -97,7 +119,7 @@ class ApiService {
             .get(uri, headers: _headers(token))
             .timeout(_requestTimeout);
         _activeBaseUrl = base;
-        return _decode(response, base);
+        return _decode(response, uri.toString());
       } on SocketException catch (e) {
         lastError = Exception('Cannot reach $base: ${e.message}');
       } on TimeoutException {
@@ -130,7 +152,7 @@ class ApiService {
             )
             .timeout(_requestTimeout);
         _activeBaseUrl = base;
-        return _decode(response, base);
+        return _decode(response, uri.toString());
       } on SocketException catch (e) {
         lastError = Exception('Cannot reach $base: ${e.message}');
       } on TimeoutException {
@@ -151,7 +173,7 @@ class ApiService {
     final baseMessage = lastError?.toString() ?? 'Unable to reach API server.';
 
     if (Platform.isAndroid) {
-      return '$baseMessage Tried: $attempted. For USB debugging with Apache on port 80, run "adb reverse tcp:8080 tcp:80". If Apache is on 8080, run "adb reverse tcp:8080 tcp:8080". For Wi-Fi, run with --dart-define=UNIDIPAY_API_BASE=http://<PC-LAN-IP>/unidipaypro/php/api/mobile/';
+      return '$baseMessage Tried: $attempted. Android checks USB reverse (127.0.0.1), emulator host (10.0.2.2), and Genymotion host (10.0.3.2). For USB debugging with Apache on port 80, run "adb reverse tcp:8080 tcp:80". If Apache is on 8080, run "adb reverse tcp:8080 tcp:8080". For Wi-Fi/real devices, run with --dart-define=UNIDIPAY_API_BASE=http://<PC-LAN-IP>/unidipaypro/php/api/mobile/';
     }
 
     return '$baseMessage Tried: $attempted. Set UNIDIPAY_API_BASE to a reachable server URL if needed.';
@@ -167,12 +189,32 @@ class ApiService {
     return headers;
   }
 
-  Map<String, dynamic> _decode(http.Response response, String requestBaseUrl) {
+  String _responsePreview(String rawBody) {
+    final normalized = rawBody.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (normalized.isEmpty) {
+      return '(empty response body)';
+    }
+
+    const maxLen = 220;
+    if (normalized.length <= maxLen) {
+      return normalized;
+    }
+
+    return '${normalized.substring(0, maxLen)}...';
+  }
+
+  Map<String, dynamic> _decode(http.Response response, String requestUrl) {
     Map<String, dynamic> data;
     try {
       data = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
-      throw Exception('Invalid server response from $requestBaseUrl');
+      final contentType = response.headers['content-type'] ?? 'unknown';
+      final preview = _responsePreview(response.body);
+      throw Exception(
+        'Invalid server response from $requestUrl '
+        '(HTTP ${response.statusCode}, content-type: $contentType). '
+        'Response preview: $preview',
+      );
     }
 
     if (response.statusCode >= 400 || (data['error'] != null)) {

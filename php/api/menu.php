@@ -6,6 +6,8 @@
 
 require_once '../config/database.php';
 
+define('DELETED_MENU_PLACEHOLDER_NAME', '__DELETED_MENU_ITEM__');
+
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -65,7 +67,8 @@ try {
 function getAllMenuItems() {
     global $pdo;
     
-    $stmt = $pdo->query("SELECT * FROM menu_items ORDER BY category, name");
+    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE name <> ? ORDER BY category, name");
+    $stmt->execute([DELETED_MENU_PLACEHOLDER_NAME]);
     $menuItems = $stmt->fetchAll();
     
     sendResponse(['menu_items' => $menuItems]);
@@ -94,8 +97,8 @@ function getMenuItem($id) {
 function getMenuByCategory($category) {
     global $pdo;
     
-    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE category = ? ORDER BY name");
-    $stmt->execute([sanitize($category)]);
+    $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE category = ? AND name <> ? ORDER BY name");
+    $stmt->execute([sanitize($category), DELETED_MENU_PLACEHOLDER_NAME]);
     $menuItems = $stmt->fetchAll();
     
     sendResponse(['menu_items' => $menuItems]);
@@ -213,14 +216,76 @@ function updateMenuItem() {
  */
 function deleteMenuItem($id) {
     global $pdo;
-    
-    $stmt = $pdo->prepare("DELETE FROM menu_items WHERE id = ?");
-    $stmt->execute([$id]);
-    
-    if ($stmt->rowCount() === 0) {
-        sendResponse(['error' => 'Menu item not found'], 404);
+
+    $id = intval($id);
+
+    try {
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT * FROM menu_items WHERE id = ? LIMIT 1 FOR UPDATE");
+        $stmt->execute([$id]);
+        $item = $stmt->fetch();
+
+        if (!$item) {
+            throw new Exception('Menu item not found');
+        }
+
+        if (($item['name'] ?? '') === DELETED_MENU_PLACEHOLDER_NAME) {
+            throw new Exception('System placeholder item cannot be deleted');
+        }
+
+        try {
+            $stmt = $pdo->prepare("DELETE FROM menu_items WHERE id = ?");
+            $stmt->execute([$id]);
+        } catch (PDOException $e) {
+            // Item is referenced by order_items (legacy/historical orders).
+            if ($e->getCode() !== '23000') {
+                throw $e;
+            }
+
+            $placeholderId = ensureDeletedMenuPlaceholder($pdo);
+
+            $stmt = $pdo->prepare("UPDATE order_items SET menu_item_id = ? WHERE menu_item_id = ?");
+            $stmt->execute([$placeholderId, $id]);
+
+            $stmt = $pdo->prepare("DELETE FROM menu_items WHERE id = ?");
+            $stmt->execute([$id]);
+        }
+
+        $pdo->commit();
+        sendResponse(['success' => true]);
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        if ($e->getMessage() === 'Menu item not found') {
+            sendResponse(['error' => 'Menu item not found'], 404);
+        }
+
+        sendResponse(['error' => $e->getMessage()], 400);
     }
-    
-    sendResponse(['success' => true]);
+}
+
+/**
+ * Ensure hidden placeholder menu item exists for historical order references.
+ */
+function ensureDeletedMenuPlaceholder($pdo) {
+    $stmt = $pdo->prepare("SELECT id FROM menu_items WHERE name = ? LIMIT 1");
+    $stmt->execute([DELETED_MENU_PLACEHOLDER_NAME]);
+    $existing = $stmt->fetch();
+
+    if ($existing) {
+        return intval($existing['id']);
+    }
+
+    $stmt = $pdo->prepare("INSERT INTO menu_items (name, category, price, description, image_url, available) VALUES (?, ?, 0, ?, '', 0)");
+    $stmt->execute([
+        DELETED_MENU_PLACEHOLDER_NAME,
+        'archived',
+        'System placeholder for deleted menu item references'
+    ]);
+
+    return intval($pdo->lastInsertId());
 }
 ?>

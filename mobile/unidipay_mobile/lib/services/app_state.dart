@@ -15,13 +15,18 @@ class AppState extends ChangeNotifier {
   Student? _student;
   bool _isLoading = false;
   String? _authError;
+  bool _requiresPasswordSetup = false;
   final List<CartItem> _cart = [];
 
   String? get token => _token;
   Student? get student => _student;
-  bool get isAuthenticated => _token != null && _student != null;
+  bool get isAuthenticated =>
+      _token != null && _student != null && !_requiresPasswordSetup;
+  bool get hasPendingSetup =>
+      _token != null && _student != null && _requiresPasswordSetup;
   bool get isLoading => _isLoading;
   String? get authError => _authError;
+  bool get requiresPasswordSetup => _requiresPasswordSetup;
   List<CartItem> get cart => List.unmodifiable(_cart);
 
   double get cartTotal =>
@@ -39,10 +44,12 @@ class AppState extends ChangeNotifier {
       try {
         final data = await _api.get('auth.php?action=me', token: _token);
         _student = Student.fromJson(data['student'] as Map<String, dynamic>);
+        _requiresPasswordSetup = data['requires_password_setup'] == true;
       } catch (e) {
         _authError = e.toString();
         _token = null;
         _student = null;
+        _requiresPasswordSetup = false;
         await prefs.remove('student_token');
       }
     }
@@ -55,16 +62,38 @@ class AppState extends ChangeNotifier {
     required String studentId,
     required String nfcCardId,
   }) async {
+    await loginWithRfid(studentId: studentId, nfcCardId: nfcCardId);
+  }
+
+  Future<void> loginWithRfid({
+    required String studentId,
+    required String nfcCardId,
+  }) async {
+    await _performLogin({
+      'student_id': studentId,
+      'nfc_card_id': nfcCardId,
+      'device_name': 'flutter-mobile',
+    });
+  }
+
+  Future<void> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    await _performLogin({
+      'identifier': email,
+      'password': password,
+      'device_name': 'flutter-mobile',
+    });
+  }
+
+  Future<void> _performLogin(Map<String, dynamic> payload) async {
     _isLoading = true;
     _authError = null;
     notifyListeners();
 
     try {
-      final data = await _api.post('auth.php?action=login', {
-        'student_id': studentId,
-        'nfc_card_id': nfcCardId,
-        'device_name': 'flutter-mobile',
-      });
+      final data = await _api.post('auth.php?action=login', payload);
 
       final newToken = data['token']?.toString();
       if (newToken == null || newToken.isEmpty) {
@@ -82,6 +111,7 @@ class AppState extends ChangeNotifier {
 
       _token = newToken;
       _student = newStudent;
+      _requiresPasswordSetup = data['requires_password_setup'] == true;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('student_token', newToken);
@@ -89,11 +119,74 @@ class AppState extends ChangeNotifier {
       _authError = e.toString();
       _token = null;
       _student = null;
+      _requiresPasswordSetup = false;
       rethrow;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> setInitialCredentials({
+    required String email,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    if (_token == null) {
+      throw Exception(
+          'You need to log in first using Student ID and RFID card.');
+    }
+
+    _isLoading = true;
+    _authError = null;
+    notifyListeners();
+
+    try {
+      await _api.post(
+        'auth.php?action=set_initial_credentials',
+        {
+          'email': email,
+          'password': password,
+          'confirm_password': confirmPassword,
+        },
+        token: _token,
+      );
+
+      final me = await _api.get('auth.php?action=me', token: _token);
+      _student = Student.fromJson(me['student'] as Map<String, dynamic>);
+      _requiresPasswordSetup = me['requires_password_setup'] == true;
+    } catch (e) {
+      _authError = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> requestPasswordReset({required String email}) async {
+    await _api.post('auth.php?action=request_password_reset', {'email': email});
+  }
+
+  Future<Map<String, dynamic>> validateResetToken(
+      {required String token}) async {
+    final data = await _api.get(
+      'auth.php?action=validate_reset_token',
+      query: {'token': token},
+    );
+    return data;
+  }
+
+  Future<void> resetPassword({
+    required String token,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _api.post('auth.php?action=reset_password', {
+      'token': token,
+      'new_password': newPassword,
+      'confirm_password': confirmPassword,
+    });
   }
 
   Future<void> logout() async {
@@ -108,6 +201,7 @@ class AppState extends ChangeNotifier {
     _token = null;
     _student = null;
     _authError = null;
+    _requiresPasswordSetup = false;
     _cart.clear();
 
     final prefs = await SharedPreferences.getInstance();
@@ -119,6 +213,7 @@ class AppState extends ChangeNotifier {
     if (_token == null) return;
     final data = await _api.get('auth.php?action=me', token: _token);
     _student = Student.fromJson(data['student'] as Map<String, dynamic>);
+    _requiresPasswordSetup = data['requires_password_setup'] == true;
     notifyListeners();
   }
 

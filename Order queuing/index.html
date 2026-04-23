@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Order Queue</title>
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+	<main class="queue-page">
+		<header class="queue-header">
+			<h1>Order Queue</h1>
+		</header>
+
+		<section>
+			<p id="lastUpdated" class="last-updated">Last updated: --</p>
+			<div class="queue-board">
+				<section class="queue-column queue-column-processing">
+					<div class="column-header">
+						<h2>Processing</h2>
+						<span id="processingCount" class="count-badge">0</span>
+					</div>
+					<div id="processingList" class="order-list">
+						<p class="loading-message">Loading processing orders...</p>
+					</div>
+				</section>
+
+				<section class="queue-column queue-column-ready">
+					<div class="column-header">
+						<h2>Ready for Pickup</h2>
+						<span id="readyCount" class="count-badge">0</span>
+					</div>
+					<div id="readyList" class="order-list">
+						<p class="loading-message">Loading ready orders...</p>
+					</div>
+				</section>
+			</div>
+		</section>
+	</main>
+
+	<script src="OrderQueuing.js"></script>
+</body>
+</html>

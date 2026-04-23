@@ -16,11 +16,55 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _studentIdController = TextEditingController();
   final _nfcCardController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _setupEmailController = TextEditingController();
+  final _setupPasswordController = TextEditingController();
+  final _setupConfirmController = TextEditingController();
+  bool _useEmailLogin = true;
+
+  String? _passwordPolicyError(String value) {
+    if (value.length < 10) {
+      return 'Minimum 10 characters';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Add at least one uppercase letter';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Add at least one lowercase letter';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Add at least one number';
+    }
+    if (!RegExp(r'[^A-Za-z0-9]').hasMatch(value)) {
+      return 'Add at least one special character';
+    }
+    return null;
+  }
+
+  String _extractResetToken(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return '';
+    }
+
+    final uri = Uri.tryParse(trimmed);
+    if (uri != null && uri.queryParameters.containsKey('token')) {
+      return (uri.queryParameters['token'] ?? '').trim();
+    }
+
+    return trimmed;
+  }
 
   @override
   void dispose() {
     _studentIdController.dispose();
     _nfcCardController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _setupEmailController.dispose();
+    _setupPasswordController.dispose();
+    _setupConfirmController.dispose();
     super.dispose();
   }
 
@@ -29,10 +73,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final appState = context.read<AppState>();
     try {
-      await appState.login(
-        studentId: _studentIdController.text.trim(),
-        nfcCardId: _nfcCardController.text.trim(),
-      );
+      if (_useEmailLogin) {
+        await appState.loginWithEmail(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
+      } else {
+        await appState.loginWithRfid(
+          studentId: _studentIdController.text.trim(),
+          nfcCardId: _nfcCardController.text.trim(),
+        );
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful')),
@@ -42,6 +94,177 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Login failed: $e')),
       );
+    }
+  }
+
+  Future<void> _submitInitialCredentials() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final appState = context.read<AppState>();
+    try {
+      await appState.setInitialCredentials(
+        email: _setupEmailController.text.trim(),
+        password: _setupPasswordController.text,
+        confirmPassword: _setupConfirmController.text,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Credentials saved. Please continue.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Setup failed: $e')),
+      );
+    }
+  }
+
+  Future<void> _showForgotPasswordDialog() async {
+    final emailCtrl = TextEditingController();
+    final appState = context.read<AppState>();
+    try {
+      final requested = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Forgot Password'),
+          content: TextField(
+            controller: emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(
+              labelText: 'Registered email',
+              hintText: 'name@school.edu',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Send link'),
+            ),
+          ],
+        ),
+      );
+
+      if (requested != true || !mounted) return;
+
+      await appState.requestPasswordReset(email: emailCtrl.text.trim());
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'If your account exists, a reset link was sent to your email.',
+          ),
+        ),
+      );
+
+      await _showResetPasswordDialog();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to request reset: $e')),
+      );
+    } finally {
+      emailCtrl.dispose();
+    }
+  }
+
+  Future<void> _showResetPasswordDialog() async {
+    final tokenCtrl = TextEditingController();
+    final passwordCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    final dialogFormKey = GlobalKey<FormState>();
+    final appState = context.read<AppState>();
+
+    try {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reset Password'),
+          content: Form(
+            key: dialogFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: tokenCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Reset token or reset link',
+                  ),
+                  validator: (v) => (v == null || v.trim().isEmpty)
+                      ? 'Reset token is required'
+                      : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: passwordCtrl,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: 'New password'),
+                  validator: (v) =>
+                      v == null ? 'Password is required' : _passwordPolicyError(v),
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: confirmCtrl,
+                  obscureText: true,
+                  decoration:
+                      const InputDecoration(labelText: 'Confirm password'),
+                  validator: (v) =>
+                      v != passwordCtrl.text ? 'Passwords do not match' : null,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (dialogFormKey.currentState!.validate()) {
+                  Navigator.pop(context, true);
+                }
+              },
+              child: const Text('Reset now'),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed != true || !mounted) return;
+
+      final parsedToken = _extractResetToken(tokenCtrl.text);
+      await appState.validateResetToken(token: parsedToken);
+
+      await appState.resetPassword(
+        token: parsedToken,
+        newPassword: passwordCtrl.text,
+        confirmPassword: confirmCtrl.text,
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset successful. Sign in with email.'),
+        ),
+      );
+      setState(() {
+        _useEmailLogin = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Reset failed: $e')),
+      );
+    } finally {
+      tokenCtrl.dispose();
+      passwordCtrl.dispose();
+      confirmCtrl.dispose();
     }
   }
 
@@ -204,6 +427,9 @@ class _LoginScreenState extends State<LoginScreen> {
     String? authError,
     ColorScheme colorScheme,
   ) {
+    final state = context.watch<AppState>();
+    final pendingSetup = state.hasPendingSetup;
+
     return Card(
       elevation: 12,
       shadowColor: colorScheme.shadow.withValues(alpha: 0.25),
@@ -258,51 +484,230 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              TextFormField(
-                controller: _studentIdController,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: 'Student ID',
-                  prefixIcon: const Icon(Icons.school_outlined, size: 20),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 44, minHeight: 44),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.55),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
+              if (pendingSetup) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    'First-time setup required. Set your email and password to continue.',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Student ID is required'
-                    : null,
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _nfcCardController,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => loading ? null : _submit(),
-                decoration: InputDecoration(
-                  labelText: 'RFID Card ID',
-                  prefixIcon: const Icon(Icons.badge_outlined, size: 20),
-                  prefixIconConstraints:
-                      const BoxConstraints(minWidth: 44, minHeight: 44),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.55),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _setupEmailController,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                    prefixIconConstraints:
+                        const BoxConstraints(minWidth: 44, minHeight: 44),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.55),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
+                  validator: (v) {
+                    if (!pendingSetup) return null;
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'NFC Card ID is required'
-                    : null,
-              ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _setupPasswordController,
+                  obscureText: true,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                    prefixIconConstraints:
+                        const BoxConstraints(minWidth: 44, minHeight: 44),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.55),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  validator: (v) {
+                    if (!pendingSetup) return null;
+                    if (v == null) return 'Password is required';
+                    return _passwordPolicyError(v);
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _setupConfirmController,
+                  obscureText: true,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) =>
+                      loading ? null : _submitInitialCredentials(),
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password',
+                    prefixIcon:
+                        const Icon(Icons.verified_user_outlined, size: 20),
+                    prefixIconConstraints:
+                        const BoxConstraints(minWidth: 44, minHeight: 44),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.55),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  validator: (v) {
+                    if (!pendingSetup) return null;
+                    if (v != _setupPasswordController.text) {
+                      return 'Passwords do not match';
+                    }
+                    return null;
+                  },
+                ),
+              ] else ...[
+                SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment<bool>(
+                      value: true,
+                      icon: Icon(Icons.alternate_email),
+                      label: Text('Email'),
+                    ),
+                    ButtonSegment<bool>(
+                      value: false,
+                      icon: Icon(Icons.badge_outlined),
+                      label: Text('Student + RFID'),
+                    ),
+                  ],
+                  selected: {_useEmailLogin},
+                  onSelectionChanged: (selection) {
+                    setState(() {
+                      _useEmailLogin = selection.first;
+                    });
+                  },
+                ),
+                const SizedBox(height: 14),
+                if (_useEmailLogin) ...[
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: const Icon(Icons.email_outlined, size: 20),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 44, minHeight: 44),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.55),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) {
+                      if (!_useEmailLogin) return null;
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Email is required';
+                      }
+                      if (!v.contains('@')) return 'Enter a valid email';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => loading ? null : _submit(),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 44, minHeight: 44),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.55),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) {
+                      if (!_useEmailLogin) return null;
+                      if (v == null || v.isEmpty) {
+                        return 'Password is required';
+                      }
+                      return null;
+                    },
+                  ),
+                ] else ...[
+                  TextFormField(
+                    controller: _studentIdController,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Student ID',
+                      prefixIcon: const Icon(Icons.school_outlined, size: 20),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 44, minHeight: 44),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.55),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) {
+                      if (_useEmailLogin) return null;
+                      return (v == null || v.trim().isEmpty)
+                          ? 'Student ID is required'
+                          : null;
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _nfcCardController,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => loading ? null : _submit(),
+                    decoration: InputDecoration(
+                      labelText: 'RFID Card ID',
+                      prefixIcon: const Icon(Icons.badge_outlined, size: 20),
+                      prefixIconConstraints:
+                          const BoxConstraints(minWidth: 44, minHeight: 44),
+                      filled: true,
+                      fillColor: colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.55),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (v) {
+                      if (_useEmailLogin) return null;
+                      return (v == null || v.trim().isEmpty)
+                          ? 'NFC Card ID is required'
+                          : null;
+                    },
+                  ),
+                ],
+              ],
               const SizedBox(height: 18),
               FilledButton.icon(
-                onPressed: loading ? null : _submit,
+                onPressed: loading
+                    ? null
+                    : (pendingSetup ? _submitInitialCredentials : _submit),
                 icon: loading
                     ? const SizedBox(
                         width: 18,
@@ -310,8 +715,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const FaIcon(FontAwesomeIcons.rightToBracket, size: 16),
-                label: Text(loading ? 'Signing in...' : 'Login'),
+                label: Text(
+                  loading
+                      ? (pendingSetup ? 'Saving...' : 'Signing in...')
+                      : (pendingSetup ? 'Save Credentials' : 'Login'),
+                ),
               ),
+              if (!pendingSetup && _useEmailLogin) ...[
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: loading ? null : _showForgotPasswordDialog,
+                  child: const Text('Forgot password?'),
+                ),
+              ],
               const SizedBox(height: 14),
               Container(
                 padding: const EdgeInsets.all(12),

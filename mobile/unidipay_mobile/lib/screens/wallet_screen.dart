@@ -3,7 +3,8 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../services/app_state.dart';
+import 'package:unidipay_mobile/services/app_state.dart';
+import 'package:unidipay_mobile/widgets/blurred_image_background.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -18,11 +19,33 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _syncing = false;
   String? _pendingInvoiceId;
   String? _pendingCheckoutUrl;
+  bool _entered = false;
+
+  Widget _panIn({
+    required Widget child,
+    Offset begin = const Offset(0.06, 0),
+    Duration duration = const Duration(milliseconds: 430),
+  }) {
+    return AnimatedOpacity(
+      opacity: _entered ? 1 : 0,
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      child: AnimatedSlide(
+        offset: _entered ? Offset.zero : begin,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        child: child,
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _entered = true);
+      }
       _syncPendingPayments(showSnackBarWhenCredited: true);
     });
   }
@@ -310,108 +333,123 @@ class _WalletScreenState extends State<WalletScreen> {
           ],
         );
 
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1120),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-              children: [
-                if (isWide)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const BlurredImageBackground(
+              assetPath: 'assets/images/PCU2024.jpg',
+              blurSigma: 16,
+              overlayOpacity: 0.5,
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: _panIn(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                     children: [
-                      Expanded(
-                        child: Card(
-                          margin: const EdgeInsets.only(right: 10),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: detailsPanel,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: Card(
-                          margin: const EdgeInsets.only(left: 10),
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  'Quick Actions',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w800),
-                                ),
-                                const SizedBox(height: 10),
-                                FilledButton.icon(
-                                  onPressed:
-                                      _submitting ? null : _startGcashPayment,
-                                  icon: _submitting
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        )
-                                      : const FaIcon(
-                                          FontAwesomeIcons.moneyBillWave,
-                                          size: 16),
-                                  label: Text(_submitting
-                                      ? 'Processing...'
-                                      : 'Pay with GCash'),
-                                ),
-                                const SizedBox(height: 10),
-                                OutlinedButton.icon(
-                                  onPressed:
-                                      _submitting || _pendingInvoiceId == null
-                                          ? null
-                                          : _verifyPayment,
-                                  icon: const FaIcon(
-                                      FontAwesomeIcons.shieldHalved,
-                                      size: 16),
-                                  label: const Text('Verify Payment'),
-                                ),
-                                const SizedBox(height: 8),
-                                OutlinedButton.icon(
-                                  onPressed: _submitting || _syncing
-                                      ? null
-                                      : () => _syncPendingPayments(
-                                          showSnackBarWhenCredited: true),
-                                  icon: _syncing
-                                      ? const SizedBox(
-                                          width: 16,
-                                          height: 16,
-                                          child: CircularProgressIndicator(
-                                              strokeWidth: 2),
-                                        )
-                                      : const FaIcon(
-                                          FontAwesomeIcons.arrowsRotate,
-                                          size: 16),
-                                  label: Text(_syncing
-                                      ? 'Syncing...'
-                                      : 'Sync Pending Top-ups'),
-                                ),
-                              ],
+                  if (isWide)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Card(
+                            margin: const EdgeInsets.only(right: 10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: detailsPanel,
                             ),
                           ),
                         ),
+                        Expanded(
+                          child: Card(
+                            margin: const EdgeInsets.only(left: 10),
+                            child: Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    'Quick Actions',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  FilledButton.icon(
+                                    onPressed: _submitting
+                                        ? null
+                                        : _startGcashPayment,
+                                    icon: _submitting
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          )
+                                        : const FaIcon(
+                                            FontAwesomeIcons.moneyBillWave,
+                                            size: 16),
+                                    label: Text(_submitting
+                                        ? 'Processing...'
+                                        : 'Pay with GCash'),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  OutlinedButton.icon(
+                                    onPressed: _submitting ||
+                                            _pendingInvoiceId == null
+                                        ? null
+                                        : _verifyPayment,
+                                    icon: const FaIcon(
+                                        FontAwesomeIcons.shieldHalved,
+                                        size: 16),
+                                    label: const Text('Verify Payment'),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: _submitting || _syncing
+                                        ? null
+                                        : () => _syncPendingPayments(
+                                            showSnackBarWhenCredited: true),
+                                    icon: _syncing
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2),
+                                          )
+                                        : const FaIcon(
+                                            FontAwesomeIcons.arrowsRotate,
+                                            size: 16),
+                                    label: Text(_syncing
+                                        ? 'Syncing...'
+                                        : 'Sync Pending Top-ups'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: detailsPanel,
                       ),
-                    ],
-                  )
-                else
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: detailsPanel,
                     ),
-                  ),
-              ],
+                ],
+              ),
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );

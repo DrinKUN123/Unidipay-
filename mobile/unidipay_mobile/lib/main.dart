@@ -11,13 +11,31 @@ void main() {
   runApp(const UniDiPayMobileApp());
 }
 
-class UniDiPayMobileApp extends StatelessWidget {
+class UniDiPayMobileApp extends StatefulWidget {
   const UniDiPayMobileApp({super.key});
 
   @override
+  State<UniDiPayMobileApp> createState() => _UniDiPayMobileAppState();
+}
+
+class _UniDiPayMobileAppState extends State<UniDiPayMobileApp> {
+  late final AppState _appState;
+
+  @override
+  void initState() {
+    super.initState();
+    _appState = AppState(ApiService())..initialize();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState(ApiService())..initialize(),
+    return ChangeNotifierProvider<AppState>(
+      create: (_) => _appState,
       child: MaterialApp(
         title: 'UniDiPay Mobile',
         debugShowCheckedModeBanner: false,
@@ -34,16 +52,30 @@ class AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
+    final gateKey = state.isLoading
+        ? const ValueKey('auth-loading')
+        : state.isAuthenticated
+            ? const ValueKey('auth-home')
+            : const ValueKey('auth-login');
 
     if (state.isLoading) {
-      return const _LaunchSplash();
+      return const KeyedSubtree(
+        key: ValueKey('auth-loading'),
+        child: _LaunchSplash(),
+      );
     }
 
     if (!state.isAuthenticated) {
-      return const LoginScreen();
+      return const KeyedSubtree(
+        key: ValueKey('auth-login'),
+        child: LoginScreen(),
+      );
     }
 
-    return const HomeShell();
+    return KeyedSubtree(
+      key: gateKey,
+      child: const HomeShell(),
+    );
   }
 }
 

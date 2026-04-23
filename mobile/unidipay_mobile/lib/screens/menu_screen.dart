@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 
-import '../models/menu_item.dart';
-import '../services/api_service.dart';
-import '../services/app_state.dart';
+import 'package:unidipay_mobile/models/menu_item.dart';
+import 'package:unidipay_mobile/services/api_service.dart';
+import 'package:unidipay_mobile/services/app_state.dart';
+import 'package:unidipay_mobile/widgets/blurred_image_background.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -17,11 +18,34 @@ class _MenuScreenState extends State<MenuScreen> {
   static const categories = ['Meals', 'Drinks', 'Snacks', 'Desserts'];
   String _selectedCategory = 'Meals';
   late Future<List<MenuItemModel>> _future;
+  bool _entered = false;
+
+  Widget _panIn({
+    required Widget child,
+    Offset begin = const Offset(0.06, 0),
+    Duration duration = const Duration(milliseconds: 430),
+  }) {
+    return AnimatedOpacity(
+      opacity: _entered ? 1 : 0,
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      child: AnimatedSlide(
+        offset: _entered ? Offset.zero : begin,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        child: child,
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     _future = context.read<AppState>().fetchMenu();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      setState(() => _entered = true);
+    });
   }
 
   String? _resolveImageUrl(String? rawUrl) {
@@ -94,13 +118,21 @@ class _MenuScreenState extends State<MenuScreen> {
         final contentMaxWidth =
             constraints.maxWidth >= 900 ? 1120.0 : constraints.maxWidth;
 
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: contentMaxWidth),
-            child: FutureBuilder<List<MenuItemModel>>(
-              future: _future,
-              builder: (context, snapshot) {
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            const BlurredImageBackground(
+              assetPath: 'assets/images/PCU2024.jpg',
+              blurSigma: 16,
+              overlayOpacity: 0.5,
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentMaxWidth),
+                child: FutureBuilder<List<MenuItemModel>>(
+                  future: _future,
+                  builder: (context, snapshot) {
                 final allItems = snapshot.data ?? const <MenuItemModel>[];
                 final filteredItems = allItems
                     .where((item) => _matchesCategory(item, _selectedCategory))
@@ -114,12 +146,13 @@ class _MenuScreenState extends State<MenuScreen> {
                     });
                     await _future;
                   },
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                  child: _panIn(
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         Row(
                           children: [
                             Expanded(
@@ -648,13 +681,16 @@ class _MenuScreenState extends State<MenuScreen> {
                                               ],
                                             ),
                         ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 );
               },
+                ),
+              ),
             ),
-          ),
+          ],
         );
       },
     );

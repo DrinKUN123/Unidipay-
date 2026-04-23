@@ -74,8 +74,8 @@
                         <p class="page-subtitle">Real-time tracking with faster triage</p>
                     </div>
                     <div class="intro-actions">
-                        <span class="live-chip"><span class="pulse-dot"></span>Live updates on</span>
-                        <button class="ghost-btn" onclick="loadOrderStats({ forceApply: true }); loadOrders({ forceApply: true }); applyPendingUpdates();"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh now</button>
+                        <span class="live-chip" style="display: none;"><span class="pulse-dot"></span>Live updates on</span>
+                        <button class="ghost-btn" style="display: none;" onclick="loadOrderStats({ forceApply: true }); loadOrders({ forceApply: true }); applyPendingUpdates();"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh now</button>
                         <button id="newUpdatesBtn" class="ghost-btn" style="display: none;" onclick="applyPendingUpdates()"><i class="fa-solid fa-bell" aria-hidden="true"></i> New updates available</button>
                     </div>
                 </div>
@@ -285,6 +285,23 @@
         </div>
     </div>
 
+    <!-- Status Change Confirmation Modal -->
+    <div id="statusConfirmModal" class="modal" aria-hidden="true">
+        <div class="modal-content" style="max-width: 420px;" role="dialog" aria-modal="true" aria-labelledby="statusConfirmTitle">
+            <div class="modal-header">
+                <h3 id="statusConfirmTitle">Confirm Status Change</h3>
+                <button class="modal-close" onclick="cancelStatusChange()" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="statusConfirmMessage" style="font-size: 14px; color: var(--gray-700); margin: 0;"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="cancelStatusChange()">Cancel</button>
+                <button id="confirmStatusChangeBtn" class="btn btn-primary" onclick="confirmStatusChange()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Order Modal -->
     <!-- <div id="createOrderModal" class="modal">
         <div class="modal-content">
@@ -347,6 +364,7 @@
         let pendingOrdersData = null;
         let pendingStatsData = null;
         let interactionPauseUntil = 0;
+        let pendingStatusChange = null;
 
         // Protect page
         protectPage();
@@ -358,6 +376,7 @@
         setupStatCardListeners();
         setupSearchFunctionality();
         setupInteractionTracking();
+        setupStatusConfirmModal();
 
         // Setup stat card click listeners for sorting
         function setupStatCardListeners() {
@@ -388,7 +407,7 @@
         }
 
         function isAnyModalOpen() {
-            const modalIds = ['editOrderModal', 'addItemModal', 'deleteConfirmModal'];
+            const modalIds = ['editOrderModal', 'addItemModal', 'deleteConfirmModal', 'statusConfirmModal'];
             return modalIds.some(id => {
                 const modal = document.getElementById(id);
                 return modal && modal.classList.contains('show');
@@ -614,16 +633,25 @@
                 const paymentLabel = paymentMethod === 'nfc' ? 'RFID' : paymentMethod.toUpperCase();
                 const status = normalizeStatus(order.status);
                 const isCancelled = isCancelledStatus(status);
-                const statusLabel = isCancelled ? 'CANCELLED' : (status ? status.toUpperCase() : 'UNKNOWN');
+                const isCompleted = isCompletedStatus(status);
+                const isReadOnly = isReadOnlyStatus(status);
+                const statusLabel = isCancelled
+                    ? 'CANCELLED'
+                    : (isCompleted ? 'COMPLETED' : (status ? status.toUpperCase() : 'UNKNOWN'));
+                const readOnlyClass = isCompleted
+                    ? 'order-readonly-flag order-readonly-flag-completed'
+                    : 'order-readonly-flag';
+                const readOnlyIcon = isCompleted ? 'fa-circle-check' : 'fa-ban';
+                const readOnlyText = isCompleted ? 'Completed order (read-only)' : 'Cancelled order (read-only)';
 
                 return `
-                <div class="order-item ${isCancelled ? 'order-item-cancelled' : ''}">
+                <div class="order-item ${isCancelled ? 'order-item-cancelled' : ''} ${isCompleted ? 'order-item-completed' : ''}">
                     <div class="order-header">
                         <div class="order-info">
                             <h4>Order #${order.id}</h4>
                             <p class="order-student">Student: ${order.student_name} (${order.student_id})</p>
                             <p class="order-payment">Payment: <span class="payment-badge payment-${paymentMethod}">${paymentLabel}</span></p>
-                            ${isCancelled ? '<p class="order-readonly-flag"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancelled order (read-only)</p>' : ''}
+                            ${isReadOnly ? `<p class="${readOnlyClass}"><i class="fa-solid ${readOnlyIcon}" aria-hidden="true"></i> ${readOnlyText}</p>` : ''}
                         </div>
                         <div class="order-meta">
                             <span class="order-total">${formatCurrency(order.total)}</span>
@@ -635,14 +663,14 @@
                             <div class="order-item-row">
                                 <span>${item.name} × ${item.quantity}</span>
                                 <span>${formatCurrency(item.subtotal)}</span>
-                                ${isCancelled ? '' : `<button class="btn-item-delete" onclick="openDeleteItemModal(${order.id}, ${item.id}, '${item.name.replace(/'/g, "\\'")}')" aria-label="Delete item"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>`}
+                                ${isReadOnly ? '' : `<button class="btn-item-delete" onclick="openDeleteItemModal(${order.id}, ${item.id}, '${item.name.replace(/'/g, "\\'")}')" aria-label="Delete item"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>`}
                             </div>
                         `).join('')}
                     </div>
-                    ${isCancelled
-                        ? `<div class="order-actions"><span class="order-readonly-flag"><i class="fa-solid fa-ban" aria-hidden="true"></i> Cancelled order (read-only)</span><span class="order-time">${formatDateTime(order.created_at)}</span></div>`
+                    ${isReadOnly
+                        ? `<div class="order-actions"><span class="${readOnlyClass}"><i class="fa-solid ${readOnlyIcon}" aria-hidden="true"></i> ${readOnlyText}</span><span class="order-time">${formatDateTime(order.created_at)}</span></div>`
                         : `<div class="order-actions">
-                            <select class="order-status-select" onchange="updateOrderStatus(${order.id}, this.value)">
+                            <select class="order-status-select" onchange="updateOrderStatus(${order.id}, this.value, this)">
                                 <option value="pending" ${status === 'pending' ? 'selected' : ''}>Pending</option>
                                 <option value="processing" ${status === 'processing' ? 'selected' : ''}>Processing</option>
                                 <option value="ready" ${status === 'ready' ? 'selected' : ''}>Ready</option>
@@ -717,32 +745,171 @@
                 || normalized === '';
         }
 
+        function isCompletedStatus(status) {
+            return normalizeStatus(status) === 'completed';
+        }
+
+        function isReadOnlyStatus(status) {
+            return isCancelledStatus(status) || isCompletedStatus(status);
+        }
+
+        function isCancelledOptionValue(status) {
+            const normalized = normalizeStatus(status);
+            return normalized === 'cancelled' || normalized === 'canceled';
+        }
+
+        function setupStatusConfirmModal() {
+            const statusModal = document.getElementById('statusConfirmModal');
+            if (!statusModal) return;
+
+            statusModal.addEventListener('click', (event) => {
+                if (event.target === statusModal) {
+                    cancelStatusChange();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && statusModal.classList.contains('show')) {
+                    cancelStatusChange();
+                }
+            });
+        }
+
+        function openStatusConfirmModal(orderId, newStatus, previousStatus, selectElement) {
+            const modal = document.getElementById('statusConfirmModal');
+            const message = document.getElementById('statusConfirmMessage');
+            const confirmBtn = document.getElementById('confirmStatusChangeBtn');
+
+            if (!modal || !message || !confirmBtn) {
+                return false;
+            }
+
+            const normalizedStatus = normalizeStatus(newStatus);
+            const isCancelAction = isCancelledOptionValue(normalizedStatus);
+            const actionLabel = isCancelAction ? 'cancel' : 'mark as completed';
+
+            pendingStatusChange = {
+                orderId,
+                newStatus: normalizedStatus,
+                previousStatus,
+                selectElement
+            };
+
+            message.textContent = `Are you sure you want to ${actionLabel} order #${orderId}?`;
+            confirmBtn.textContent = isCancelAction ? 'Yes, Cancel Order' : 'Yes, Mark Completed';
+
+            if (isCancelAction) {
+                confirmBtn.style.background = 'var(--danger)';
+                confirmBtn.style.borderColor = 'var(--danger)';
+                confirmBtn.style.color = 'white';
+            } else {
+                confirmBtn.style.background = '';
+                confirmBtn.style.borderColor = '';
+                confirmBtn.style.color = '';
+            }
+
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            confirmBtn.focus();
+            return true;
+        }
+
+        function cancelStatusChange() {
+            const modal = document.getElementById('statusConfirmModal');
+            if (!modal) return;
+
+            if (pendingStatusChange?.selectElement) {
+                const previous = pendingStatusChange.previousStatus;
+                const fallback = isCancelledOptionValue(previous) ? 'cancelled' : (previous || 'pending');
+                pendingStatusChange.selectElement.value = fallback;
+            }
+
+            pendingStatusChange = null;
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        async function confirmStatusChange() {
+            if (!pendingStatusChange) return;
+
+            const modal = document.getElementById('statusConfirmModal');
+            const { orderId, newStatus } = pendingStatusChange;
+
+            try {
+                await applyStatusUpdate(orderId, newStatus);
+                pendingStatusChange = null;
+
+                if (modal) {
+                    modal.classList.remove('show');
+                    modal.setAttribute('aria-hidden', 'true');
+                }
+            } catch (error) {
+                if (pendingStatusChange?.selectElement) {
+                    const previous = pendingStatusChange.previousStatus;
+                    const fallback = isCancelledOptionValue(previous) ? 'cancelled' : (previous || 'pending');
+                    pendingStatusChange.selectElement.value = fallback;
+                }
+
+                pendingStatusChange = null;
+
+                if (modal) {
+                    modal.classList.remove('show');
+                    modal.setAttribute('aria-hidden', 'true');
+                }
+
+                const reason = error?.message ? `Failed to update order status: ${error.message}` : 'Failed to update order status';
+                showError(reason);
+                console.error(error);
+            }
+        }
+
+        async function applyStatusUpdate(orderId, newStatus) {
+            pauseAutoUpdates();
+
+            await apiRequest(`orders.php?action=status&id=${orderId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            showSuccess(`Order status updated to ${newStatus}`);
+            loadOrderStats({ forceApply: true });
+            loadOrders({ forceApply: true });
+        }
+
         /**
          * Update order status
          */
-        async function updateOrderStatus(orderId, newStatus) {
+        async function updateOrderStatus(orderId, newStatus, selectElement = null) {
             const order = allOrders.find(o => o.id === orderId);
-            if (order && isCancelledStatus(order.status)) {
-                showError('Cancelled orders are read-only');
-                loadOrders({ forceApply: true });
+            const previousStatus = normalizeStatus(order?.status) || 'pending';
+            const normalizedNewStatus = normalizeStatus(newStatus);
+
+            if (order && isReadOnlyStatus(order.status)) {
+                showError('Completed and cancelled orders are read-only');
+                if (selectElement) {
+                    selectElement.value = isCompletedStatus(order.status) ? 'completed' : 'cancelled';
+                }
                 return;
             }
 
-            pauseAutoUpdates();
+            const needsVerification =
+                (normalizedNewStatus === 'completed' || isCancelledOptionValue(normalizedNewStatus))
+                && normalizedNewStatus !== previousStatus;
+
+            if (needsVerification) {
+                pauseAutoUpdates(15000);
+                const opened = openStatusConfirmModal(orderId, normalizedNewStatus, previousStatus, selectElement);
+                if (opened) return;
+            }
 
             try {
-                await apiRequest(`orders.php?action=status&id=${orderId}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ status: newStatus })
-                });
-
-                showSuccess(`Order status updated to ${newStatus}`);
-                
-                // Live update - refresh immediately
-                loadOrderStats({ forceApply: true });
-                loadOrders({ forceApply: true });
+                await applyStatusUpdate(orderId, normalizedNewStatus);
 
             } catch (error) {
+                if (selectElement) {
+                    const fallback = isCancelledOptionValue(previousStatus) ? 'cancelled' : previousStatus;
+                    selectElement.value = fallback || 'pending';
+                }
                 const reason = error?.message ? `Failed to update order status: ${error.message}` : 'Failed to update order status';
                 showError(reason);
                 console.error(error);
@@ -769,16 +936,19 @@
             document.getElementById('editOrderStatus').value = normalizeStatus(order.status) || 'pending';
             document.getElementById('editOrderTotal').value = order.total;
 
-            const isCancelled = isCancelledStatus(order.status);
+            const isReadOnly = isReadOnlyStatus(order.status);
+            const isCompleted = isCompletedStatus(order.status);
             const saveButton = document.getElementById('saveOrderBtn');
             const editPaymentMethod = document.getElementById('editPaymentMethod');
             const editOrderStatus = document.getElementById('editOrderStatus');
 
-            if (editPaymentMethod) editPaymentMethod.disabled = isCancelled;
-            if (editOrderStatus) editOrderStatus.disabled = isCancelled;
+            if (editPaymentMethod) editPaymentMethod.disabled = isReadOnly;
+            if (editOrderStatus) editOrderStatus.disabled = isReadOnly;
             if (saveButton) {
-                saveButton.disabled = isCancelled;
-                saveButton.textContent = isCancelled ? 'Read Only' : 'Save Changes';
+                saveButton.disabled = isReadOnly;
+                saveButton.textContent = isReadOnly
+                    ? (isCompleted ? 'Completed (Read Only)' : 'Cancelled (Read Only)')
+                    : 'Save Changes';
             }
 
             // Display items
@@ -850,8 +1020,8 @@
 
             const orderId = window.currentEditOrderId;
             const targetOrder = allOrders.find(o => o.id === orderId);
-            if (targetOrder && isCancelledStatus(targetOrder.status)) {
-                showError('Cancelled orders are read-only');
+            if (targetOrder && isReadOnlyStatus(targetOrder.status)) {
+                showError('Completed and cancelled orders are read-only');
                 return;
             }
 
@@ -937,8 +1107,8 @@
          */
         function openAddItemModal(orderId) {
             const order = allOrders.find(o => o.id === orderId);
-            if (order && isCancelledStatus(order.status)) {
-                showError('Cancelled orders are read-only');
+            if (order && isReadOnlyStatus(order.status)) {
+                showError('Completed and cancelled orders are read-only');
                 return;
             }
 
@@ -1012,8 +1182,8 @@
 
             const orderId = window.currentOrderForItem;
             const order = allOrders.find(o => o.id === orderId);
-            if (order && isCancelledStatus(order.status)) {
-                showError('Cancelled orders are read-only');
+            if (order && isReadOnlyStatus(order.status)) {
+                showError('Completed and cancelled orders are read-only');
                 closeAddItemModal();
                 return;
             }
@@ -1057,8 +1227,8 @@
          */
         function openDeleteItemModal(orderId, itemId, itemName) {
             const order = allOrders.find(o => o.id === orderId);
-            if (order && isCancelledStatus(order.status)) {
-                showError('Cancelled orders are read-only');
+            if (order && isReadOnlyStatus(order.status)) {
+                showError('Completed and cancelled orders are read-only');
                 return;
             }
 
@@ -1073,8 +1243,8 @@
          */
         function openDeleteOrderModal(orderId) {
             const order = allOrders.find(o => o.id === orderId);
-            if (order && isCancelledStatus(order.status)) {
-                showError('Cancelled orders are read-only');
+            if (order && isReadOnlyStatus(order.status)) {
+                showError('Completed and cancelled orders are read-only');
                 return;
             }
 
@@ -1100,8 +1270,8 @@
 
             const { orderId, itemId } = window.deleteItemData;
             const order = allOrders.find(o => o.id === orderId);
-            if (order && isCancelledStatus(order.status)) {
-                showError('Cancelled orders are read-only');
+            if (order && isReadOnlyStatus(order.status)) {
+                showError('Completed and cancelled orders are read-only');
                 closeDeleteModal();
                 return;
             }
